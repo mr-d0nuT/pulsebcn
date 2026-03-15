@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { Star, Send } from 'lucide-react';
 
 const GOOGLE_SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbwrfFDz4ffbYEBjor4jRZazCQxsvrejKp3aJYYVIQCO3gMai0oZTQaN18pn7AUObqO0/exec";
 const AGENDA_DIARIA_URL = "https://opendata-ajuntament.barcelona.cat/data/api/action/datastore_search?resource_id=877ccf66-9106-4ae2-be51-95a9f6469e4c&limit=300";
@@ -17,31 +16,27 @@ export default function MapViewer() {
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
-    // Función de seguridad interna (Evita ReferenceError y Objects are not valid)
-    const limpiarTexto = (valor, porDefecto) => {
-      if (valor === null || valor === undefined) return porDefecto;
-      if (typeof valor === 'object') return porDefecto; // Si el Ayuntamiento manda un objeto corrupto, lo bloqueamos
-      return String(valor);
-    };
-
     const fetchAgendaHoy = async () => {
       try {
         const res = await fetch(AGENDA_DIARIA_URL);
         const data = await res.json();
         
-        const records = data.result.records
-          .filter(r => r.geo_epgs_4326_lat && r.geo_epgs_4326_lon) 
-          .map(r => ({
-            id: r._id || Math.random(), // id siempre seguro
-            pos: [parseFloat(r.geo_epgs_4326_lat), parseFloat(r.geo_epgs_4326_lon)],
-            // Pasamos los textos por el filtro de seguridad
-            name: limpiarTexto(r.name, "Esdeveniment"),
-            categoria: limpiarTexto(r.secondary_filters_name, "General"),
-            horari: limpiarTexto(r.timetable, "Consultar horari oficial"),
-            direccion: limpiarTexto(r.addresses_main_address, "Barcelona")
-          }));
-        
-        setEventos(records);
+        if (data && data.result && data.result.records) {
+          const records = data.result.records
+            .filter(r => r.geo_epgs_4326_lat && r.geo_epgs_4326_lon) 
+            .map((r, index) => {
+              // PARANOIA ABSOLUTA: Forzamos la conversión a String puro para evitar colapsos
+              return {
+                id: String(r._id || index),
+                pos: [parseFloat(r.geo_epgs_4326_lat), parseFloat(r.geo_epgs_4326_lon)],
+                name: String(r.name || "Esdeveniment"),
+                categoria: String(r.secondary_filters_name || "General"),
+                horari: String(r.timetable || "Consultar horari"),
+                direccion: String(r.addresses_main_address || "Barcelona")
+              };
+            });
+          setEventos(records);
+        }
       } catch (e) { 
         console.error("Error API BCN:", e); 
       }
@@ -51,7 +46,14 @@ export default function MapViewer() {
       try {
         const res = await fetch(GOOGLE_SHEETS_API_URL);
         const data = await res.json();
-        if (Array.isArray(data)) setReviews(data);
+        if (Array.isArray(data)) {
+          const safeReviews = data.map(rev => ({
+            evento_id: String(rev.evento_id || ""),
+            usuario: String(rev.usuario || "Anònim"),
+            comentario: String(rev.comentario || "")
+          }));
+          setReviews(safeReviews);
+        }
       } catch (e) { 
         console.error("Error Sheets:", e); 
       }
@@ -73,17 +75,17 @@ export default function MapViewer() {
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
           evento_id: String(evento_id),
-          usuario: nuevoUsuario,
+          usuario: String(nuevoUsuario),
           estrellas: 5,
-          comentario: nuevoComentario
+          comentario: String(nuevoComentario)
         })
       });
       
       setReviews(prev => [...prev, { 
         evento_id: String(evento_id), 
-        usuario: nuevoUsuario, 
+        usuario: String(nuevoUsuario), 
         estrellas: 5, 
-        comentario: nuevoComentario 
+        comentario: String(nuevoComentario) 
       }]);
       
       setNuevoComentario("");
@@ -95,10 +97,11 @@ export default function MapViewer() {
     }
   };
 
-  const eventIcon = L.divIcon({ 
+  // Prevenimos que Leaflet intente buscar la ventana en el servidor
+  const eventIcon = typeof window !== 'undefined' ? L.divIcon({ 
     html: `<div style="background:#2563eb;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(37,99,235,0.8);"></div>`, 
     className: 'custom-icon' 
-  });
+  }) : null;
 
   return (
     <div className="h-screen w-screen absolute inset-0 bg-[#0f172a]">
@@ -106,7 +109,7 @@ export default function MapViewer() {
         <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" attribution='&copy; Open Data BCN' />
         
         {eventos.map(ev => {
-          const evReviews = reviews.filter(r => r.evento_id === String(ev.id));
+          const evReviews = reviews.filter(r => r.evento_id === ev.id);
           
           return (
             <Marker key={ev.id} position={ev.pos} icon={eventIcon}>
@@ -118,9 +121,7 @@ export default function MapViewer() {
                   <p className="text-[11px] font-bold text-slate-500 mb-3 border-b border-slate-200 pb-2">🕒 {ev.horari}</p>
                   
                   <div className="bg-[#f8fafc] p-2 rounded-lg mt-2 border border-slate-200">
-                    <h4 className="text-[10px] font-black text-slate-700 uppercase mb-2 flex items-center gap-1">
-                      <Star size={12} className="text-amber-500" /> Estat en viu ({evReviews.length})
-                    </h4>
+                    <h4 className="text-[10px] font-black text-slate-700 uppercase mb-2">Estat en viu ({evReviews.length})</h4>
                     
                     <div className="max-h-24 overflow-y-auto space-y-1.5 mb-3 pr-1">
                       {evReviews.length === 0 ? (
@@ -138,8 +139,8 @@ export default function MapViewer() {
                     <form onSubmit={(e) => enviarReview(ev.id, e)} className="flex flex-col gap-1.5 border-t border-slate-200 pt-2">
                       <input type="text" placeholder="Àlies..." className="text-[11px] p-1.5 border border-slate-300 rounded focus:outline-none focus:border-blue-500" value={nuevoUsuario} onChange={e => setNuevoUsuario(e.target.value)} disabled={enviando} required />
                       <div className="flex gap-1.5">
-                        <input type="text" placeholder="Què està passant ara?" className="text-[11px] p-1.5 border border-slate-300 rounded flex-grow focus:outline-none focus:border-blue-500" value={nuevoComentario} onChange={e => setNuevoComentario(e.target.value)} disabled={enviando} required />
-                        <button type="submit" disabled={enviando} className={`text-white px-3 rounded flex items-center justify-center font-bold ${enviando ? 'bg-slate-400' : 'bg-blue-600 hover:bg-blue-700'}`}><Send size={12} /></button>
+                        <input type="text" placeholder="Què passa ara?" className="text-[11px] p-1.5 border border-slate-300 rounded flex-grow focus:outline-none focus:border-blue-500" value={nuevoComentario} onChange={e => setNuevoComentario(e.target.value)} disabled={enviando} required />
+                        <button type="submit" disabled={enviando} className={`text-white px-3 rounded flex items-center justify-center font-bold ${enviando ? 'bg-slate-400' : 'bg-blue-600 hover:bg-blue-700'}`}>Enviar</button>
                       </div>
                     </form>
                   </div>
