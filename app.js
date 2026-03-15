@@ -20,11 +20,21 @@ window.addEventListener('load', function() {
   L.control.zoom({position: 'bottomleft'}).addTo(map);
   map.on('click', closePanel);
 
-  allEvents = getFallback();
-  window.allEvents = allEvents;
-  renderEvents();
-  document.getElementById('loading-overlay').classList.add('hidden');
-
+ fetch(SHEETS_URL + '?action=events')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      allEvents = data.events || getFallback();
+      window.allEvents = allEvents;
+      renderEvents();
+      document.getElementById('loading-overlay').classList.add('hidden');
+      if (data.source === 'live') showToast('Esdeveniments en temps real carregats!');
+    })
+    .catch(function() {
+      allEvents = getFallback();
+      window.allEvents = allEvents;
+      renderEvents();
+      document.getElementById('loading-overlay').classList.add('hidden');
+    });
   document.querySelectorAll('.filter-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
       document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
