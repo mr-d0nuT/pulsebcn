@@ -1,121 +1,252 @@
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --bg: #0f0f1a; --bg2: #1a1a2e; --surface: #16213e; --surface2: #1f2b47;
-  --accent: #e94560; --text: #e8e8f0; --text2: #9a9ab0;
-  --green: #00d084; --amber: #f59e0b; --blue: #3b82f6;
-  --header-h: 56px; --filter-h: 48px; --radius: 16px;
-  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+const WORKER_URL = '';
+const BCN_CENTER = [41.3851, 2.1734];
+const TODAY = new Date().toISOString().split('T')[0];
+
+let map, userMarker, userLat, userLng;
+let allEvents = [];
+let filteredEvents = [];
+let markers = [];
+let activeFilter = 'all';
+let activeEventId = null;
+let reviewRating = 0;
+let reviewPhotoB64 = null;
+
+const CATEGORY_ICONS = {
+  culture:'🎭', music:'🎵', sport:'⚽', cinema:'🎬',
+  protest:'📣', family:'👨‍👩‍👧', exhibition:'🖼️', food:'🍽️',
+  theatre:'🎪', conference:'🎤', default:'📍'
+};
+const CATEGORY_COLORS = {
+  culture:'#a855f7', music:'#3b82f6', sport:'#22c55e', cinema:'#f59e0b',
+  protest:'#ef4444', family:'#06b6d4', exhibition:'#8b5cf6',
+  food:'#f97316', theatre:'#ec4899', default:'#e94560'
+};
+
+document.addEventListener('DOMContentLoaded', async () => {
+  initMap();
+  initFilters();
+  initListToggle();
+  initReviewModal();
+  await loadEvents();
+  hideLoading();
+  locateUser();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+});
+
+function initMap() {
+  map = L.map('map', { center: BCN_CENTER, zoom: 13, zoomControl: false });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO', subdomains: 'abcd', maxZoom: 19
+  }).addTo(map);
+  L.control.zoom({ position: 'bottomleft' }).addTo(map);
+  map.on('click', closePanel);
 }
-html, body { height: 100%; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
-#app-header {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 500;
-  height: var(--header-h); background: var(--bg2);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
+
+async function loadEvents() {
+  allEvents = getFallbackEvents();
+  window.allEvents = allEvents;
+  renderEvents();
 }
-.logo { font-size: 18px; font-weight: 700; }
-.badge { margin-left: 8px; padding: 2px 8px; background: var(--accent); color: #fff; border-radius: 999px; font-size: 11px; font-weight: 600; }
-.header-right { display: flex; gap: 8px; }
-.header-right button { background: var(--surface); border: none; color: var(--text); width: 36px; height: 36px; border-radius: 8px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
-#filter-bar {
-  position: fixed; top: var(--header-h); left: 0; right: 0; z-index: 490;
-  height: var(--filter-h); background: var(--bg2);
-  display: flex; align-items: center; gap: 8px; padding: 0 12px;
-  overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid rgba(255,255,255,0.06);
+
+function getFallbackEvents() {
+  return [
+    { id:'evt-001', title:'Mercat de la Boqueria', category:'food', lat:41.3816, lng:2.1726, free:true, family:true, time:'08:00–20:30', location:'La Rambla, 91', description:'El mercat més emblemàtic de Barcelona, ple de productes frescos i vida.', url:'https://www.boqueria.barcelona' },
+    { id:'evt-002', title:'Concert Plaça del Rei', category:'music', lat:41.3841, lng:2.1769, free:true, family:false, time:'19:00–21:00', location:'Plaça del Rei, s/n', description:'Cicle de música en viu al cor del barri gòtic.', url:'https://guia.barcelona.cat' },
+    { id:'evt-003', title:'Exposició Museu Picasso', category:'exhibition', lat:41.3851, lng:2.1812, free:false, family:true, time:'10:00–19:00', location:'Carrer de Montcada, 15-23', description:"Una mirada als anys clau en la formació artística del geni de Màlaga.", price:'12€ / 7€ reduïda', url:'https://museupicasso.bcn.cat' },
+    { id:'evt-004', title:'Marató Cinema Fantàstic', category:'cinema', lat:41.3968, lng:2.1614, free:false, family:false, time:'16:00–00:00', location:'Cinema Verdi, Gràcia', description:'Sessió especial amb 4 pel·lícules de terror i fantasia.', price:'22€', url:'https://cines-verdi.com' },
+    { id:'evt-005', title:'Manifestació Llengua Catalana', category:'protest', lat:41.3909, lng:2.1698, free:true, family:true, time:'18:00', location:'Arc de Triomf', description:'Concentració i manifestació convocada per entitats culturals.', url:'#' },
+    { id:'evt-006', title:'Taller Robòtica Infantil', category:'culture', lat:41.4000, lng:2.1900, free:true, family:true, time:'10:00–13:00', location:'Biblioteca Sagrada Família', description:'Tallers gratuïts per a nens de 8 a 12 anys.', url:'https://biblioteques.barcelona' },
+    { id:'evt-007', title:'Mercat Vintage El Raval', category:'food', lat:41.3795, lng:2.1680, free:true, family:true, time:'10:00–18:00', location:"Plaça dels Àngels, El Raval", description:'Mercat de productes vintage i objectes curiosos.', url:'#' },
+    { id:'evt-008', title:'Visita Guiada Modernisme', category:'culture', lat:41.3917, lng:2.1649, free:false, family:false, time:'10:30 i 16:30', location:"Sortida: Plaça Catalunya", description:'Descobreix edificis modernistes fora dels circuits turístics.', price:'15€', url:'https://barcelona.cat/turisme' }
+  ];
 }
-#filter-bar::-webkit-scrollbar { display: none; }
-.filter-btn {
-  flex-shrink: 0; background: var(--surface); border: 1px solid rgba(255,255,255,0.1);
-  color: var(--text2); padding: 6px 14px; border-radius: 999px;
-  font-size: 12px; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+
+function renderEvents() {
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+  filteredEvents = allEvents.filter(evt => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'free') return evt.free;
+    if (activeFilter === 'family') return evt.family;
+    return evt.category === activeFilter;
+  });
+  filteredEvents.forEach(evt => {
+    const icon = createIcon(evt);
+    const marker = L.marker([evt.lat, evt.lng], { icon })
+      .addTo(map).on('click', () => openEventPanel(evt));
+    markers.push(marker);
+  });
+  updateCount();
+  renderList();
 }
-.filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-#map { position: fixed; top: calc(var(--header-h) + var(--filter-h)); left: 0; right: 0; bottom: 0; z-index: 1; }
-.leaflet-container { background: #1a1a2e; }
-.panel {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 400;
-  background: var(--bg2); border-radius: var(--radius) var(--radius) 0 0;
-  max-height: 75vh; overflow-y: auto;
-  transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
-  box-shadow: var(--shadow);
+
+function createIcon(evt) {
+  const emoji = CATEGORY_ICONS[evt.category] || CATEGORY_ICONS.default;
+  const color = CATEGORY_COLORS[evt.category] || CATEGORY_COLORS.default;
+  const badges = [];
+  if (evt.free) badges.push(`<span style="background:#00d084;color:#000;font-size:8px;padding:1px 4px;border-radius:4px;font-weight:700">FREE</span>`);
+  if (evt.family) badges.push(`<span style="font-size:10px">👨‍👩‍👧</span>`);
+  const html = `
+    <div style="background:${color};width:40px;height:40px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,0.5);border:2px solid rgba(255,255,255,0.3);">
+      <span style="transform:rotate(45deg);font-size:18px">${emoji}</span>
+    </div>
+    <div style="display:flex;gap:2px;justify-content:center;margin-top:2px">${badges.join('')}</div>`;
+  return L.divIcon({ html, className:'custom-marker', iconSize:[40,50], iconAnchor:[20,50], popupAnchor:[0,-52] });
 }
-.panel.open { transform: translateY(0); }
-.panel.hidden { display: none; }
-.panel-handle { width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin: 12px auto 8px; }
-#panel-content { padding: 0 20px 32px; }
-.event-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; line-height: 1.3; }
-.event-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
-.tag { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
-.tag-free { background: rgba(0,208,132,0.15); color: var(--green); border: 1px solid rgba(0,208,132,0.3); }
-.tag-family { background: rgba(59,130,246,0.15); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
-.tag-paid { background: rgba(245,158,11,0.15); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
-.tag-category { background: rgba(255,255,255,0.08); color: var(--text2); }
-.event-desc { font-size: 14px; color: var(--text2); line-height: 1.6; margin: 12px 0; }
-.event-location { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
-.event-location strong { color: var(--text); }
-.panel-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
-.btn-primary { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; flex: 1; transition: opacity 0.2s; }
-.btn-primary:hover { opacity: 0.85; }
-.btn-secondary { background: var(--surface); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 10px; font-size: 14px; cursor: pointer; flex: 1; transition: background 0.2s; }
-.reviews-section { margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); }
-.reviews-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
-.review-item { margin-bottom: 16px; }
-.review-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.review-stars { color: var(--amber); font-size: 13px; }
-.review-time { font-size: 11px; color: var(--text2); }
-.review-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
-.review-photo { width: 100%; max-width: 280px; border-radius: 8px; margin-top: 6px; }
-.no-reviews { font-size: 13px; color: var(--text2); text-align: center; padding: 16px 0; }
-#event-list {
-  position: fixed; top: 0; right: 0; bottom: 0; z-index: 450;
-  width: min(380px, 100vw); background: var(--bg2); overflow-y: auto;
-  transform: translateX(100%); transition: transform 0.3s ease; box-shadow: var(--shadow);
+
+async function openEventPanel(evt) {
+  activeEventId = evt.id;
+  const panel = document.getElementById('event-panel');
+  const content = document.getElementById('panel-content');
+  const reviews = [];
+  content.innerHTML = `
+    <div class="event-title">${evt.title}</div>
+    <div class="event-meta">
+      ${evt.free ? '<span class="tag tag-free">🆓 Gratuït</span>' : `<span class="tag tag-paid">💶 ${evt.price||'De pagament'}</span>`}
+      ${evt.family ? '<span class="tag tag-family">👨‍👩‍👧 Família</span>' : ''}
+      <span class="tag tag-category">${evt.category}</span>
+      <span class="tag tag-category">🕐 ${evt.time||'Consultar'}</span>
+    </div>
+    <div class="event-location">📍 <strong>${evt.location}</strong></div>
+    <p class="event-desc">${evt.description}</p>
+    <div class="panel-actions">
+      <button class="btn-primary" onclick="window._startAR && window._startAR('${evt.id}')">📷 Navegar en AR</button>
+      <button class="btn-secondary" onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${evt.lat},${evt.lng}')">🗺️ Maps</button>
+    </div>
+    <div class="panel-actions" style="margin-top:8px">
+      <button class="btn-secondary" onclick="openReviewModal()">✍️ Ressenya</button>
+      ${evt.url && evt.url!=='#' ? `<button class="btn-secondary" onclick="window.open('${evt.url}')">🔗 Més info</button>` : ''}
+    </div>
+    <div class="reviews-section">
+      <div class="reviews-title">💬 Ressenyes d'avui</div>
+      <p class="no-reviews">Sigues el primer en deixar una ressenya avui! 🌟</p>
+    </div>`;
+  panel.classList.remove('hidden');
+  requestAnimationFrame(() => panel.classList.add('open'));
+  map.flyTo([evt.lat, evt.lng], 16, { duration: 0.8 });
 }
-#event-list.open { transform: translateX(0); }
-#event-list.hidden { display: none; }
-.list-header { position: sticky; top: 0; background: var(--bg2); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); font-weight: 600; }
-.list-header button { background: none; border: none; color: var(--text); font-size: 18px; cursor: pointer; }
-.list-item { padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.15s; }
-.list-item:hover { background: var(--surface); }
-.list-item-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-.list-item-sub { font-size: 12px; color: var(--text2); display: flex; gap: 8px; align-items: center; }
-.dot-free { color: var(--green); }
-.dot-family { color: var(--blue); }
-.fab { position: fixed; bottom: 32px; right: 20px; z-index: 300; width: 52px; height: 52px; background: var(--accent); color: white; border: none; border-radius: 50%; font-size: 22px; cursor: pointer; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
-.fab:hover { transform: scale(1.08); }
-#ar-overlay { position: fixed; inset: 0; z-index: 1000; background: #000; }
-#ar-overlay.hidden { display: none; }
-#ar-video { width: 100%; height: 100%; object-fit: cover; position: absolute; }
-#ar-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-#ar-hud { position: absolute; bottom: 80px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-#ar-compass { width: 80px; height: 80px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.5); background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 28px; }
-#ar-info { background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; }
-#ar-close { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); color: white; border: none; padding: 8px 16px; border-radius: 999px; font-size: 14px; cursor: pointer; }
-.modal { position: fixed; inset: 0; z-index: 600; background: rgba(0,0,0,0.7); display: flex; align-items: flex-end; justify-content: center; }
-.modal.hidden { display: none; }
-.modal-box { background: var(--bg2); border-radius: var(--radius) var(--radius) 0 0; padding: 24px 20px; width: 100%; max-width: 600px; }
-.modal-box h3 { font-size: 17px; margin-bottom: 16px; }
-#star-rating { display: flex; gap: 6px; margin-bottom: 14px; }
-.star { font-size: 28px; color: var(--text2); cursor: pointer; transition: color 0.15s; }
-.star.active { color: var(--amber); }
-#review-text { width: 100%; height: 100px; padding: 12px; background: var(--surface); color: var(--text); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; font-size: 14px; resize: none; margin-bottom: 12px; }
-.photo-label { display: block; text-align: center; padding: 10px; background: var(--surface); border-radius: 10px; cursor: pointer; font-size: 14px; color: var(--text2); margin-bottom: 12px; }
-.photo-label input { display: none; }
-#photo-preview img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; }
-.modal-actions { display: flex; gap: 10px; }
-.modal-actions button { flex: 1; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; }
-#review-cancel { background: var(--surface); color: var(--text); }
-#toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(30,30,50,0.95); color: var(--text); padding: 10px 20px; border-radius: 999px; font-size: 13px; z-index: 700; transition: opacity 0.3s; pointer-events: none; }
-#toast.hidden { opacity: 0; }
-#loading-overlay { position: fixed; inset: 0; z-index: 800; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
-#loading-overlay.hidden { display: none; }
-.pulse-loader { display: flex; gap: 8px; }
-.pulse-loader div { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); animation: pulse-dot 1.2s ease-in-out infinite; }
-.pulse-loader div:nth-child(2) { animation-delay: 0.2s; }
-.pulse-loader div:nth-child(3) { animation-delay: 0.4s; }
-@keyframes pulse-dot { 0%,100%{transform:scale(0.7);opacity:0.5} 50%{transform:scale(1.2);opacity:1} }
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
-@media (min-width: 768px) {
-  .panel { max-width: 480px; left: auto; right: 20px; bottom: 20px; border-radius: var(--radius); }
+
+function closePanel() {
+  const panel = document.getElementById('event-panel');
+  panel.classList.remove('open');
+  setTimeout(() => panel.classList.add('hidden'), 350);
+  activeEventId = null;
 }
+
+function initReviewModal() {
+  document.querySelectorAll('.star').forEach(s => s.addEventListener('click', () => {
+    reviewRating = +s.dataset.v;
+    document.querySelectorAll('.star').forEach((st,i) => st.classList.toggle('active', i < reviewRating));
+  }));
+  document.getElementById('review-photo').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      reviewPhotoB64 = ev.target.result;
+      document.getElementById('photo-preview').innerHTML = `<img src="${reviewPhotoB64}" alt="preview"/>`;
+    };
+    reader.readAsDataURL(file);
+  });
+  document.getElementById('review-cancel').addEventListener('click', closeReviewModal);
+  document.getElementById('review-submit').addEventListener('click', () => {
+    if (!reviewRating) return showToast('Selecciona una puntuació ⭐');
+    showToast('Ressenya publicada! 🎉');
+    closeReviewModal();
+  });
+}
+
+function openReviewModal() { document.getElementById('review-modal').classList.remove('hidden'); }
+function closeReviewModal() {
+  document.getElementById('review-modal').classList.add('hidden');
+  document.getElementById('review-text').value = '';
+  document.getElementById('photo-preview').innerHTML = '';
+  reviewRating = 0; reviewPhotoB64 = null;
+  document.querySelectorAll('.star').forEach(s => s.classList.remove('active'));
+}
+
+function initFilters() {
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter;
+      renderEvents(); closePanel();
+    });
+  });
+}
+
+function initListToggle() {
+  const list = document.getElementById('event-list');
+  document.getElementById('btn-list-toggle').addEventListener('click', () => {
+    list.classList.remove('hidden');
+    requestAnimationFrame(() => list.classList.add('open'));
+  });
+  document.getElementById('btn-list-close').addEventListener('click', () => {
+    list.classList.remove('open');
+    setTimeout(() => list.classList.add('hidden'), 300);
+  });
+}
+
+function renderList() {
+  document.getElementById('list-items').innerHTML = filteredEvents.map(evt => `
+    <div class="list-item" onclick="flyToEvent('${evt.id}')">
+      <div class="list-item-title">${CATEGORY_ICONS[evt.category]||'📍'} ${evt.title}</div>
+      <div class="list-item-sub">
+        <span>${evt.time||''}</span>
+        ${evt.free ? '<span class="dot-free">● Gratuït</span>' : ''}
+        ${evt.family ? '<span class="dot-family">● Família</span>' : ''}
+      </div>
+    </div>`).join('');
+}
+
+function flyToEvent(id) {
+  const evt = filteredEvents.find(e => e.id === id); if (!evt) return;
+  map.flyTo([evt.lat, evt.lng], 16, { duration: 0.8 });
+  setTimeout(() => openEventPanel(evt), 500);
+  const list = document.getElementById('event-list');
+  list.classList.remove('open');
+  setTimeout(() => list.classList.add('hidden'), 300);
+}
+
+function locateUser() {
+  document.getElementById('btn-locate').addEventListener('click', getUserLocation);
+  getUserLocation();
+}
+
+function getUserLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    userLat = pos.coords.latitude; userLng = pos.coords.longitude;
+    window.userLat = userLat; window.userLng = userLng;
+    if (userMarker) map.removeLayer(userMarker);
+    userMarker = L.circleMarker([userLat, userLng], {
+      radius:10, fillColor:'#3b82f6', fillOpacity:0.9, color:'#fff', weight:3
+    }).addTo(map).bindPopup('Ets aquí 📍');
+    map.flyTo([userLat, userLng], 14);
+  }, null, { enableHighAccuracy: true });
+}
+
+function updateCount() {
+  document.getElementById('event-count').textContent =
+    `${filteredEvents.length} event${filteredEvents.length!==1?'s':''}`;
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').classList.add('hidden');
+}
+function showToast(msg, dur=3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), dur);
+}
+
+document.getElementById('btn-refresh').addEventListener('click', async () => {
+  showToast('🔄 Actualitzant…');
+  loadEvents();
+  showToast('✅ Actualitzat!');
+});
+
+import('./ar.js').then(ar => { window._startAR = ar.startAR; });
+
+window.openEventPanel = openEventPanel;
+window.flyToEvent = flyToEvent;
+window.openReviewModal = openReviewModal;
