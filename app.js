@@ -20,19 +20,20 @@ window.addEventListener('load', function() {
   L.control.zoom({position: 'bottomleft'}).addTo(map);
   map.on('click', closePanel);
 
-  allEvents = [
-    {id:'e1',title:'Mercat de la Boqueria',category:'food',lat:41.3816,lng:2.1726,free:true,family:true,time:'08:00-20:30',location:'La Rambla 91',description:'El mercat mes emblematic de Barcelona.'},
-    {id:'e2',title:'Concert Placa del Rei',category:'music',lat:41.3841,lng:2.1769,free:true,family:false,time:'19:00-21:00',location:'Placa del Rei',description:'Cicle de musica en viu al barri gotic.'},
-    {id:'e3',title:'Exposicio Museu Picasso',category:'exhibition',lat:41.3851,lng:2.1812,free:false,family:true,time:'10:00-19:00',location:'Carrer Montcada 15',description:'Formacio artistica del geni de Malaga.',price:'12 euros'},
-    {id:'e4',title:'Cinema Verdi - Marato',category:'cinema',lat:41.3968,lng:2.1614,free:false,family:false,time:'16:00-00:00',location:'Cinema Verdi Gracia',description:'4 pellicules de terror i fantasia.',price:'22 euros'},
-    {id:'e5',title:'Manifestacio Llengua',category:'protest',lat:41.3909,lng:2.1698,free:true,family:true,time:'18:00',location:'Arc de Triomf',description:'Concentracio per la llengua catalana.'},
-    {id:'e6',title:'Taller Robotica Infantil',category:'culture',lat:41.4000,lng:2.1900,free:true,family:true,time:'10:00-13:00',location:'Biblioteca Sagrada Familia',description:'Tallers per a nens de 8 a 12 anys.'},
-    {id:'e7',title:'Mercat Vintage Raval',category:'food',lat:41.3795,lng:2.1680,free:true,family:true,time:'10:00-18:00',location:'Placa dels Angels',description:'Mercat de productes vintage i curiosos.'},
-    {id:'e8',title:'Visita Guiada Modernisme',category:'culture',lat:41.3917,lng:2.1649,free:false,family:false,time:'10:30 i 16:30',location:'Placa Catalunya',description:'Edificis modernistes fora dels circuits.',price:'15 euros'}
-  ];
-  window.allEvents = allEvents;
-  renderEvents();
-  document.getElementById('loading-overlay').classList.add('hidden');
+  fetch(WORKER_URL + '/events')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      allEvents = data.events || [];
+      window.allEvents = allEvents;
+      renderEvents();
+      document.getElementById('loading-overlay').classList.add('hidden');
+    })
+    .catch(function() {
+      allEvents = getFallback();
+      window.allEvents = allEvents;
+      renderEvents();
+      document.getElementById('loading-overlay').classList.add('hidden');
+    });
 
   document.querySelectorAll('.filter-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -263,6 +264,17 @@ function showToast(msg) {
   t.classList.remove('hidden');
   setTimeout(function() { t.classList.add('hidden'); }, 3000);
 }
-
+function getFallback() {
+  return [
+    {id:'e1',title:'Mercat de la Boqueria',category:'food',lat:41.3816,lng:2.1726,free:true,family:true,time:'08:00-20:30',location:'La Rambla 91',description:'El mercat mes emblematic de Barcelona.'},
+    {id:'e2',title:'Concert Placa del Rei',category:'music',lat:41.3841,lng:2.1769,free:true,family:false,time:'19:00-21:00',location:'Placa del Rei',description:'Cicle de musica en viu al barri gotic.'},
+    {id:'e3',title:'Exposicio Museu Picasso',category:'exhibition',lat:41.3851,lng:2.1812,free:false,family:true,time:'10:00-19:00',location:'Carrer Montcada 15',description:'Formacio artistica del geni de Malaga.',price:'12 euros'},
+    {id:'e4',title:'Cinema Verdi - Marato',category:'cinema',lat:41.3968,lng:2.1614,free:false,family:false,time:'16:00-00:00',location:'Cinema Verdi Gracia',description:'4 pellicules de terror i fantasia.',price:'22 euros'},
+    {id:'e5',title:'Manifestacio Llengua',category:'protest',lat:41.3909,lng:2.1698,free:true,family:true,time:'18:00',location:'Arc de Triomf',description:'Concentracio per la llengua catalana.'},
+    {id:'e6',title:'Taller Robotica Infantil',category:'culture',lat:41.4000,lng:2.1900,free:true,family:true,time:'10:00-13:00',location:'Biblioteca Sagrada Familia',description:'Tallers per a nens de 8 a 12 anys.'},
+    {id:'e7',title:'Mercat Vintage Raval',category:'food',lat:41.3795,lng:2.1680,free:true,family:true,time:'10:00-18:00',location:'Placa dels Angels',description:'Mercat de productes vintage i curiosos.'},
+    {id:'e8',title:'Visita Guiada Modernisme',category:'culture',lat:41.3917,lng:2.1649,free:false,family:false,time:'10:30 i 16:30',location:'Placa Catalunya',description:'Edificis modernistes fora dels circuits.',price:'15 euros'}
+  ];
+}
 window.openReviewModal = openReviewModal;
 window.flyToEvent = flyToEvent;
