@@ -1,4 +1,3 @@
-cat > .github/workflows/deploy.yml << 'ENDOFFILE'
 name: Deploy PulseBCN to GitHub Pages
 
 on:
@@ -28,4 +27,3 @@ jobs:
           path: '.'
       - id: deployment
         uses: actions/deploy-pages@v4
-ENDOFFILE
