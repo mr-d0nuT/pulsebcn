@@ -1,4 +1,4 @@
-var WORKER_URL = 'https://pulsebcn-worker.mr-donut.workers.dev';
+var WORKER_URL = 'https://pulsebcn-worker.mr-d0nut.workers.dev';
 var BCN_CENTER = [41.3851, 2.1734];
 var map, userMarker;
 window.userLat = null;
