@@ -1,4 +1,5 @@
-var WORKER_URL = 'https://pulsebcn.mr-donut.workers.dev';
+var JSONBIN_KEY = '$2a$10$dQtht8LzWjIaoWatBAp86uJJv/0ZxlbfPgmK4qzr2FxTDNo/yKlmK';
+var JSONBIN_URL = 'https://api.jsonbin.io/v3/b';
 var BCN_CENTER = [41.3851, 2.1734];
 var map, userMarker;
 window.userLat = null;
@@ -8,6 +9,7 @@ var filteredEvents = [];
 var markers = [];
 var activeFilter = 'all';
 var reviewRating = 0;
+var reviewsBinId = null;
 
 var ICONS = {culture:'🎭',music:'🎵',sport:'⚽',cinema:'🎬',protest:'📣',family:'👨‍👩‍👧',exhibition:'🖼️',food:'🍽️',default:'📍'};
 var COLORS = {culture:'#a855f7',music:'#3b82f6',sport:'#22c55e',cinema:'#f59e0b',protest:'#ef4444',family:'#06b6d4',exhibition:'#8b5cf6',food:'#f97316',default:'#e94560'};
@@ -20,20 +22,12 @@ window.addEventListener('load', function() {
   L.control.zoom({position: 'bottomleft'}).addTo(map);
   map.on('click', closePanel);
 
-  fetch(WORKER_URL + '/events')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      allEvents = data.events || [];
-      window.allEvents = allEvents;
-      renderEvents();
-      document.getElementById('loading-overlay').classList.add('hidden');
-    })
-    .catch(function() {
-      allEvents = getFallback();
-      window.allEvents = allEvents;
-      renderEvents();
-      document.getElementById('loading-overlay').classList.add('hidden');
-    });
+  allEvents = getFallback();
+  window.allEvents = allEvents;
+  renderEvents();
+  document.getElementById('loading-overlay').classList.add('hidden');
+
+  initReviewsBin();
 
   document.querySelectorAll('.filter-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -66,22 +60,7 @@ window.addEventListener('load', function() {
   });
 
   document.getElementById('review-cancel').addEventListener('click', closeReviewModal);
-
-  document.getElementById('review-submit').addEventListener('click', function() {
-    if (!reviewRating) { showToast('Selecciona una puntuacio'); return; }
-    var text = document.getElementById('review-text').value.trim();
-    var evtId = window._currentEvtId;
-    if (!evtId) return;
-    saveReview(evtId, reviewRating, text, window._reviewPhoto || null);
-    showToast('Ressenya publicada!');
-    closeReviewModal();
-    var evt = null;
-    for (var i = 0; i < allEvents.length; i++) {
-      if (allEvents[i].id === evtId) { evt = allEvents[i]; break; }
-    }
-    if (evt) setTimeout(function(){ openPanel(evt); }, 1500);
-  });
-
+  document.getElementById('review-submit').addEventListener('click', submitReview);
   document.getElementById('review-photo').addEventListener('change', function(e) {
     var file = e.target.files[0]; if (!file) return;
     var reader = new FileReader();
@@ -93,13 +72,99 @@ window.addEventListener('load', function() {
     reader.readAsDataURL(file);
   });
 
-  document.getElementById('btn-refresh').addEventListener('click', function() {
-    showToast('Actualitzat!');
-  });
+  document.getElementById('btn-refresh').addEventListener('click', function() { showToast('Actualitzat!'); });
   document.getElementById('btn-locate').addEventListener('click', getLocation);
   getLocation();
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 });
+
+function initReviewsBin() {
+  var today = new Date().toISOString().split('T')[0];
+  var storedDate = localStorage.getItem('reviews_date');
+  var storedBinId = localStorage.getItem('reviews_bin_id');
+
+  if (storedDate === today && storedBinId) {
+    reviewsBinId = storedBinId;
+    return;
+  }
+
+  fetch(JSONBIN_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': JSONBIN_KEY,
+      'X-Bin-Name': 'pulsebcn-' + today,
+      'X-Bin-Private': 'false'
+    },
+    body: JSON.stringify({ date: today, reviews: {} })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    reviewsBinId = d.metadata.id;
+    localStorage.setItem('reviews_bin_id', reviewsBinId);
+    localStorage.setItem('reviews_date', today);
+  })
+  .catch(function(e) { console.error('Bin init error:', e); });
+}
+
+function saveReview(eventId, rating, text, photo) {
+  if (!reviewsBinId) { showToast('Error connectant. Torna-ho a provar.'); return; }
+  getReviews(eventId, function(existing) {
+    existing.push({
+      rating: rating,
+      text: text,
+      photo: photo || null,
+      timestamp: Date.now()
+    });
+    fetch(JSONBIN_URL + '/' + reviewsBinId, {
+      method: 'GET',
+      headers: { 'X-Master-Key': JSONBIN_KEY }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var data = d.record || { reviews: {} };
+      data.reviews = data.reviews || {};
+      data.reviews[eventId] = existing;
+      return fetch(JSONBIN_URL + '/' + reviewsBinId, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': JSONBIN_KEY
+        },
+        body: JSON.stringify(data)
+      });
+    })
+    .then(function() { console.log('Review saved!'); })
+    .catch(function(e) { console.error('Save error:', e); });
+  });
+}
+
+function getReviews(eventId, callback) {
+  if (!reviewsBinId) { callback([]); return; }
+  fetch(JSONBIN_URL + '/' + reviewsBinId + '/latest', {
+    headers: { 'X-Master-Key': JSONBIN_KEY }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    var data = d.record || { reviews: {} };
+    callback((data.reviews && data.reviews[eventId]) || []);
+  })
+  .catch(function() { callback([]); });
+}
+
+function submitReview() {
+  if (!reviewRating) { showToast('Selecciona una puntuacio'); return; }
+  var text = document.getElementById('review-text').value.trim();
+  var evtId = window._currentEvtId;
+  if (!evtId) return;
+  saveReview(evtId, reviewRating, text, window._reviewPhoto || null);
+  showToast('Ressenya publicada! 🎉');
+  closeReviewModal();
+  var evt = null;
+  for (var i = 0; i < allEvents.length; i++) {
+    if (allEvents[i].id === evtId) { evt = allEvents[i]; break; }
+  }
+  if (evt) setTimeout(function(){ openPanel(evt); }, 2000);
+}
 
 function renderEvents() {
   markers.forEach(function(m) { map.removeLayer(m); });
@@ -132,11 +197,13 @@ function openPanel(evt) {
   panel.classList.remove('hidden');
   setTimeout(function() { panel.classList.add('open'); }, 10);
   map.flyTo([evt.lat, evt.lng], 16, {duration: 0.8});
+
   getReviews(evt.id, function(reviews) {
     var avgHtml = '';
     if (reviews.length > 0) {
       var avg = reviews.reduce(function(s,r){ return s + r.rating; }, 0) / reviews.length;
-      avgHtml = '<div style="color:#f59e0b;margin-bottom:8px">★ ' + avg.toFixed(1) + ' <span style="color:#9a9ab0;font-size:12px">(' + reviews.length + ' ressenya' + (reviews.length > 1 ? 'es' : '') + ')</span></div>';
+      avgHtml = '<div style="color:#f59e0b;margin-bottom:8px">★ ' + avg.toFixed(1) +
+        ' <span style="color:#9a9ab0;font-size:12px">(' + reviews.length + ' ressenya' + (reviews.length > 1 ? 'es' : '') + ')</span></div>';
     }
     var priceTag = evt.free ? '<span class="tag tag-free">Gratuit</span>' : '<span class="tag tag-paid">' + (evt.price || 'De pagament') + '</span>';
     var familyTag = evt.family ? '<span class="tag tag-family">Familia</span>' : '';
@@ -167,32 +234,6 @@ function closePanel() {
   var panel = document.getElementById('event-panel');
   panel.classList.remove('open');
   setTimeout(function() { panel.classList.add('hidden'); }, 350);
-}
-
-function saveReview(eventId, rating, text, photo) {
-  var today = new Date().toISOString().split('T')[0];
-  fetch(WORKER_URL + '/reviews', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({eventId: eventId, date: today, rating: rating, text: text, photo: photo || null, timestamp: Date.now()})
-  }).then(function(r) {
-    return r.json();
-  }).then(function(d) {
-    console.log('Review saved:', d);
-  }).catch(function(e) {
-    console.error('Review error:', e);
-  });
-}
-
-function getReviews(eventId, callback) {
-  var today = new Date().toISOString().split('T')[0];
-  fetch(WORKER_URL + '/reviews?eventId=' + eventId + '&date=' + today)
-    .then(function(r) { return r.json(); })
-    .then(function(d) { callback(d.reviews || []); })
-    .catch(function(e) {
-      console.error('Get reviews error:', e);
-      callback([]);
-    });
 }
 
 function renderReviews(reviews) {
@@ -249,6 +290,19 @@ function getLocation() {
   }, null, {enableHighAccuracy: true});
 }
 
+function getFallback() {
+  return [
+    {id:'e1',title:'Mercat de la Boqueria',category:'food',lat:41.3816,lng:2.1726,free:true,family:true,time:'08:00-20:30',location:'La Rambla 91',description:'El mercat mes emblematic de Barcelona.'},
+    {id:'e2',title:'Concert Placa del Rei',category:'music',lat:41.3841,lng:2.1769,free:true,family:false,time:'19:00-21:00',location:'Placa del Rei',description:'Cicle de musica en viu al barri gotic.'},
+    {id:'e3',title:'Exposicio Museu Picasso',category:'exhibition',lat:41.3851,lng:2.1812,free:false,family:true,time:'10:00-19:00',location:'Carrer Montcada 15',description:'Formacio artistica del geni de Malaga.',price:'12 euros'},
+    {id:'e4',title:'Cinema Verdi - Marato',category:'cinema',lat:41.3968,lng:2.1614,free:false,family:false,time:'16:00-00:00',location:'Cinema Verdi Gracia',description:'4 pellicules de terror i fantasia.',price:'22 euros'},
+    {id:'e5',title:'Manifestacio Llengua',category:'protest',lat:41.3909,lng:2.1698,free:true,family:true,time:'18:00',location:'Arc de Triomf',description:'Concentracio per la llengua catalana.'},
+    {id:'e6',title:'Taller Robotica Infantil',category:'culture',lat:41.4000,lng:2.1900,free:true,family:true,time:'10:00-13:00',location:'Biblioteca Sagrada Familia',description:'Tallers per a nens de 8 a 12 anys.'},
+    {id:'e7',title:'Mercat Vintage Raval',category:'food',lat:41.3795,lng:2.1680,free:true,family:true,time:'10:00-18:00',location:'Placa dels Angels',description:'Mercat de productes vintage i curiosos.'},
+    {id:'e8',title:'Visita Guiada Modernisme',category:'culture',lat:41.3917,lng:2.1649,free:false,family:false,time:'10:30 i 16:30',location:'Placa Catalunya',description:'Edificis modernistes fora dels circuits.',price:'15 euros'}
+  ];
+}
+
 function openReviewModal() { document.getElementById('review-modal').classList.remove('hidden'); }
 function closeReviewModal() {
   document.getElementById('review-modal').classList.add('hidden');
@@ -264,17 +318,6 @@ function showToast(msg) {
   t.classList.remove('hidden');
   setTimeout(function() { t.classList.add('hidden'); }, 3000);
 }
-function getFallback() {
-  return [
-    {id:'e1',title:'Mercat de la Boqueria',category:'food',lat:41.3816,lng:2.1726,free:true,family:true,time:'08:00-20:30',location:'La Rambla 91',description:'El mercat mes emblematic de Barcelona.'},
-    {id:'e2',title:'Concert Placa del Rei',category:'music',lat:41.3841,lng:2.1769,free:true,family:false,time:'19:00-21:00',location:'Placa del Rei',description:'Cicle de musica en viu al barri gotic.'},
-    {id:'e3',title:'Exposicio Museu Picasso',category:'exhibition',lat:41.3851,lng:2.1812,free:false,family:true,time:'10:00-19:00',location:'Carrer Montcada 15',description:'Formacio artistica del geni de Malaga.',price:'12 euros'},
-    {id:'e4',title:'Cinema Verdi - Marato',category:'cinema',lat:41.3968,lng:2.1614,free:false,family:false,time:'16:00-00:00',location:'Cinema Verdi Gracia',description:'4 pellicules de terror i fantasia.',price:'22 euros'},
-    {id:'e5',title:'Manifestacio Llengua',category:'protest',lat:41.3909,lng:2.1698,free:true,family:true,time:'18:00',location:'Arc de Triomf',description:'Concentracio per la llengua catalana.'},
-    {id:'e6',title:'Taller Robotica Infantil',category:'culture',lat:41.4000,lng:2.1900,free:true,family:true,time:'10:00-13:00',location:'Biblioteca Sagrada Familia',description:'Tallers per a nens de 8 a 12 anys.'},
-    {id:'e7',title:'Mercat Vintage Raval',category:'food',lat:41.3795,lng:2.1680,free:true,family:true,time:'10:00-18:00',location:'Placa dels Angels',description:'Mercat de productes vintage i curiosos.'},
-    {id:'e8',title:'Visita Guiada Modernisme',category:'culture',lat:41.3917,lng:2.1649,free:false,family:false,time:'10:30 i 16:30',location:'Placa Catalunya',description:'Edificis modernistes fora dels circuits.',price:'15 euros'}
-  ];
-}
+
 window.openReviewModal = openReviewModal;
 window.flyToEvent = flyToEvent;
