@@ -5,18 +5,8 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Star, Send } from 'lucide-react';
 
-// 1. BACKEND DE REVIEWS (Google Sheets)
 const GOOGLE_SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbwrfFDz4ffbYEBjor4jRZazCQxsvrejKp3aJYYVIQCO3gMai0oZTQaN18pn7AUObqO0/exec";
-
-// 2. ENDPOINT DIARIO
 const AGENDA_DIARIA_URL = "https://opendata-ajuntament.barcelona.cat/data/api/action/datastore_search?resource_id=877ccf66-9106-4ae2-be51-95a9f6469e4c&limit=300";
-
-// 🛡️ ESCUDO DE DATOS GLOBAL (Fuera del componente para evitar el ReferenceError)
-const textoSeguro = (valor, porDefecto) => {
-  if (!valor) return porDefecto;
-  if (typeof valor === 'object') return porDefecto; 
-  return String(valor);
-};
 
 export default function MapViewer() {
   const [eventos, setEventos] = useState([]);
@@ -27,6 +17,13 @@ export default function MapViewer() {
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
+    // Función de seguridad interna (Evita ReferenceError y Objects are not valid)
+    const limpiarTexto = (valor, porDefecto) => {
+      if (valor === null || valor === undefined) return porDefecto;
+      if (typeof valor === 'object') return porDefecto; // Si el Ayuntamiento manda un objeto corrupto, lo bloqueamos
+      return String(valor);
+    };
+
     const fetchAgendaHoy = async () => {
       try {
         const res = await fetch(AGENDA_DIARIA_URL);
@@ -34,24 +31,19 @@ export default function MapViewer() {
         
         const records = data.result.records
           .filter(r => r.geo_epgs_4326_lat && r.geo_epgs_4326_lon) 
-          .map(r => {
-            // Usamos el Escudo Global para limpiar los datos
-            const dir = textoSeguro(r.addresses_main_address, "");
-            const dist = textoSeguro(r.addresses_district_name, "");
-            
-            return {
-              id: r._id,
-              name: textoSeguro(r.name, "Esdeveniment sense nom"),
-              pos: [parseFloat(r.geo_epgs_4326_lat), parseFloat(r.geo_epgs_4326_lon)],
-              categoria: textoSeguro(r.secondary_filters_name, "Esdeveniment"),
-              horari: textoSeguro(r.timetable, "Horari no especificat"),
-              direccion: dir ? `${dir} ${dist ? `(${dist})` : ''}` : "Barcelona"
-            };
-          });
+          .map(r => ({
+            id: r._id || Math.random(), // id siempre seguro
+            pos: [parseFloat(r.geo_epgs_4326_lat), parseFloat(r.geo_epgs_4326_lon)],
+            // Pasamos los textos por el filtro de seguridad
+            name: limpiarTexto(r.name, "Esdeveniment"),
+            categoria: limpiarTexto(r.secondary_filters_name, "General"),
+            horari: limpiarTexto(r.timetable, "Consultar horari oficial"),
+            direccion: limpiarTexto(r.addresses_main_address, "Barcelona")
+          }));
         
         setEventos(records);
       } catch (e) { 
-        console.error("Error cargando la agenda diaria", e); 
+        console.error("Error API BCN:", e); 
       }
     };
 
@@ -61,7 +53,7 @@ export default function MapViewer() {
         const data = await res.json();
         if (Array.isArray(data)) setReviews(data);
       } catch (e) { 
-        console.error("Error cargando reviews del Sheet", e); 
+        console.error("Error Sheets:", e); 
       }
     };
 
@@ -80,7 +72,7 @@ export default function MapViewer() {
         mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
-          evento_id: evento_id,
+          evento_id: String(evento_id),
           usuario: nuevoUsuario,
           estrellas: 5,
           comentario: nuevoComentario
@@ -88,7 +80,7 @@ export default function MapViewer() {
       });
       
       setReviews(prev => [...prev, { 
-        evento_id: evento_id, 
+        evento_id: String(evento_id), 
         usuario: nuevoUsuario, 
         estrellas: 5, 
         comentario: nuevoComentario 
@@ -97,7 +89,7 @@ export default function MapViewer() {
       setNuevoComentario("");
       setNuevoUsuario("");
     } catch (error) {
-      console.error("Error al enviar", error);
+      console.error(error);
     } finally {
       setEnviando(false);
     }
@@ -114,7 +106,7 @@ export default function MapViewer() {
         <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" attribution='&copy; Open Data BCN' />
         
         {eventos.map(ev => {
-          const evReviews = reviews.filter(r => r.evento_id === ev.id.toString());
+          const evReviews = reviews.filter(r => r.evento_id === String(ev.id));
           
           return (
             <Marker key={ev.id} position={ev.pos} icon={eventIcon}>
@@ -132,7 +124,7 @@ export default function MapViewer() {
                     
                     <div className="max-h-24 overflow-y-auto space-y-1.5 mb-3 pr-1">
                       {evReviews.length === 0 ? (
-                        <p className="text-[10px] text-slate-400 italic">Cap comentari encara. Hi ha molta gent?</p>
+                        <p className="text-[10px] text-slate-400 italic">Cap comentari. Què tal l'ambient?</p>
                       ) : (
                         evReviews.map((rev, idx) => (
                           <div key={idx} className="bg-white p-1.5 rounded shadow-sm border border-slate-100">
@@ -143,8 +135,8 @@ export default function MapViewer() {
                       )}
                     </div>
 
-                    <form onSubmit={(e) => enviarReview(ev.id.toString(), e)} className="flex flex-col gap-1.5 border-t border-slate-200 pt-2">
-                      <input type="text" placeholder="El teu àlies..." className="text-[11px] p-1.5 border border-slate-300 rounded focus:outline-none focus:border-blue-500" value={nuevoUsuario} onChange={e => setNuevoUsuario(e.target.value)} disabled={enviando} required />
+                    <form onSubmit={(e) => enviarReview(ev.id, e)} className="flex flex-col gap-1.5 border-t border-slate-200 pt-2">
+                      <input type="text" placeholder="Àlies..." className="text-[11px] p-1.5 border border-slate-300 rounded focus:outline-none focus:border-blue-500" value={nuevoUsuario} onChange={e => setNuevoUsuario(e.target.value)} disabled={enviando} required />
                       <div className="flex gap-1.5">
                         <input type="text" placeholder="Què està passant ara?" className="text-[11px] p-1.5 border border-slate-300 rounded flex-grow focus:outline-none focus:border-blue-500" value={nuevoComentario} onChange={e => setNuevoComentario(e.target.value)} disabled={enviando} required />
                         <button type="submit" disabled={enviando} className={`text-white px-3 rounded flex items-center justify-center font-bold ${enviando ? 'bg-slate-400' : 'bg-blue-600 hover:bg-blue-700'}`}><Send size={12} /></button>
