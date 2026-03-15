@@ -1,5 +1,4 @@
-var JSONBIN_KEY = '$2a$10$dQtht8LzWjIaoWatBAp86uJJv/0ZxlbfPgmK4qzr2FxTDNo/yKlmK';
-var JSONBIN_URL = 'https://api.jsonbin.io/v3/b';
+var SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyC0gg4K3Z7Q0eJ2-chaMdpny6R2_CrloXlp20T3-4_InCPtYwcppHjssBsAwatCwoZ/exec';
 var BCN_CENTER = [41.3851, 2.1734];
 var map, userMarker;
 window.userLat = null;
@@ -9,7 +8,6 @@ var filteredEvents = [];
 var markers = [];
 var activeFilter = 'all';
 var reviewRating = 0;
-var reviewsBinId = null;
 
 var ICONS = {culture:'🎭',music:'🎵',sport:'⚽',cinema:'🎬',protest:'📣',family:'👨‍👩‍👧',exhibition:'🖼️',food:'🍽️',default:'📍'};
 var COLORS = {culture:'#a855f7',music:'#3b82f6',sport:'#22c55e',cinema:'#f59e0b',protest:'#ef4444',family:'#06b6d4',exhibition:'#8b5cf6',food:'#f97316',default:'#e94560'};
@@ -26,8 +24,6 @@ window.addEventListener('load', function() {
   window.allEvents = allEvents;
   renderEvents();
   document.getElementById('loading-overlay').classList.add('hidden');
-
-  initReviewsBin();
 
   document.querySelectorAll('.filter-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -77,93 +73,42 @@ window.addEventListener('load', function() {
   getLocation();
 });
 
-function initReviewsBin() {
-  var today = new Date().toISOString().split('T')[0];
-  var storedDate = localStorage.getItem('reviews_date');
-  var storedBinId = localStorage.getItem('reviews_bin_id');
-
-  if (storedDate === today && storedBinId) {
-    reviewsBinId = storedBinId;
-    return;
-  }
-
-  fetch(JSONBIN_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Master-Key': JSONBIN_KEY,
-      'X-Bin-Name': 'pulsebcn-' + today,
-      'X-Bin-Private': 'false'
-    },
-    body: JSON.stringify({ date: today, reviews: {} })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    reviewsBinId = d.metadata.id;
-    localStorage.setItem('reviews_bin_id', reviewsBinId);
-    localStorage.setItem('reviews_date', today);
-  })
-  .catch(function(e) { console.error('Bin init error:', e); });
-}
-
-function saveReview(eventId, rating, text, photo) {
-  if (!reviewsBinId) { showToast('Error connectant. Torna-ho a provar.'); return; }
-  getReviews(eventId, function(existing) {
-    existing.push({
-      rating: rating,
-      text: text,
-      photo: photo || null,
-      timestamp: Date.now()
-    });
-    fetch(JSONBIN_URL + '/' + reviewsBinId, {
-      method: 'GET',
-      headers: { 'X-Master-Key': JSONBIN_KEY }
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      var data = d.record || { reviews: {} };
-      data.reviews = data.reviews || {};
-      data.reviews[eventId] = existing;
-      return fetch(JSONBIN_URL + '/' + reviewsBinId, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': JSONBIN_KEY
-        },
-        body: JSON.stringify(data)
-      });
-    })
-    .then(function() { console.log('Review saved!'); })
-    .catch(function(e) { console.error('Save error:', e); });
-  });
-}
-
-function getReviews(eventId, callback) {
-  if (!reviewsBinId) { callback([]); return; }
-  fetch(JSONBIN_URL + '/' + reviewsBinId + '/latest', {
-    headers: { 'X-Master-Key': JSONBIN_KEY }
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    var data = d.record || { reviews: {} };
-    callback((data.reviews && data.reviews[eventId]) || []);
-  })
-  .catch(function() { callback([]); });
-}
-
 function submitReview() {
   if (!reviewRating) { showToast('Selecciona una puntuacio'); return; }
   var text = document.getElementById('review-text').value.trim();
   var evtId = window._currentEvtId;
-  if (!evtId) return;
-  saveReview(evtId, reviewRating, text, window._reviewPhoto || null);
-  showToast('Ressenya publicada! 🎉');
-  closeReviewModal();
-  var evt = null;
-  for (var i = 0; i < allEvents.length; i++) {
-    if (allEvents[i].id === evtId) { evt = allEvents[i]; break; }
-  }
-  if (evt) setTimeout(function(){ openPanel(evt); }, 2000);
+  if (!evtId) { showToast('Obre un esdeveniment primer'); return; }
+
+  var params = new URLSearchParams();
+  params.append('eventId', evtId);
+  params.append('rating', reviewRating);
+  params.append('text', text);
+  params.append('timestamp', Date.now());
+
+  fetch(SHEETS_URL, {
+    method: 'POST',
+    body: params
+  })
+  .then(function() {
+    showToast('Ressenya publicada! 🎉');
+    closeReviewModal();
+    var evt = null;
+    for (var i = 0; i < allEvents.length; i++) {
+      if (allEvents[i].id === evtId) { evt = allEvents[i]; break; }
+    }
+    if (evt) setTimeout(function(){ openPanel(evt); }, 1500);
+  })
+  .catch(function(e) {
+    console.error(e);
+    showToast('Error. Torna-ho a provar.');
+  });
+}
+
+function getReviews(eventId, callback) {
+  fetch(SHEETS_URL + '?eventId=' + encodeURIComponent(eventId))
+    .then(function(r) { return r.json(); })
+    .then(function(d) { callback(d.reviews || []); })
+    .catch(function() { callback([]); });
 }
 
 function renderEvents() {
@@ -246,7 +191,6 @@ function renderReviews(reviews) {
     html += '<div class="review-item">' +
       '<div class="review-header"><span class="review-stars">' + stars + '</span><span class="review-time">' + time + '</span></div>' +
       (r.text ? '<div class="review-text">' + r.text + '</div>' : '') +
-      (r.photo ? '<img class="review-photo" src="' + r.photo + '" alt="foto"/>' : '') +
       '</div>';
   });
   return html;
