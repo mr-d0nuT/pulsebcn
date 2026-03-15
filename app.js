@@ -87,35 +87,36 @@ function submitReview() {
   if (!reviewRating) { showToast('Selecciona una puntuacio'); return; }
   var text = document.getElementById('review-text').value.trim();
   var evtId = window._currentEvtId;
-  if (!evtId) { showToast('Obre un esdeveniment primer'); return; }
+  if (!evtId) return;
 
-  var params = new URLSearchParams();
-  params.append('eventId', evtId);
-  params.append('rating', reviewRating);
-  params.append('text', text);
-  params.append('timestamp', Date.now());
+  var url = SHEETS_URL + '?action=save' +
+    '&eventId=' + encodeURIComponent(evtId) +
+    '&rating=' + reviewRating +
+    '&text=' + encodeURIComponent(text) +
+    '&timestamp=' + Date.now();
 
-  fetch(SHEETS_URL, {
-    method: 'POST',
-    body: params
-  })
-  .then(function() {
-    showToast('Ressenya publicada! 🎉');
-    closeReviewModal();
-    var evt = null;
-    for (var i = 0; i < allEvents.length; i++) {
-      if (allEvents[i].id === evtId) { evt = allEvents[i]; break; }
-    }
-    if (evt) setTimeout(function(){ openPanel(evt); }, 1500);
-  })
-  .catch(function(e) {
-    console.error(e);
-    showToast('Error. Torna-ho a provar.');
-  });
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        showToast('Ressenya publicada! 🎉');
+        closeReviewModal();
+        var evt = null;
+        for (var i = 0; i < allEvents.length; i++) {
+          if (allEvents[i].id === evtId) { evt = allEvents[i]; break; }
+        }
+        if (evt) setTimeout(function(){ openPanel(evt); }, 1500);
+      }
+    })
+    .catch(function(e) {
+      console.error(e);
+      showToast('Error. Torna-ho a provar.');
+    });
 }
 
 function getReviews(eventId, callback) {
-  fetch(SHEETS_URL + '?eventId=' + encodeURIComponent(eventId))
+  var url = SHEETS_URL + '?action=reviews&eventId=' + encodeURIComponent(eventId);
+  fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(d) { callback(d.reviews || []); })
     .catch(function() { callback([]); });
