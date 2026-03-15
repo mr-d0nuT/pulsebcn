@@ -1,3 +1,4 @@
+var WORKER_URL = 'https://pulsebcn-worker.mr-donut.workers.dev';
 var BCN_CENTER = [41.3851, 2.1734];
 var map, userMarker;
 window.userLat = null;
@@ -63,11 +64,33 @@ window.addEventListener('load', function() {
       });
     });
   });
+
   document.getElementById('review-cancel').addEventListener('click', closeReviewModal);
+
   document.getElementById('review-submit').addEventListener('click', function() {
     if (!reviewRating) { showToast('Selecciona una puntuacio'); return; }
-    showToast('Ressenya publicada! 🎉');
+    var text = document.getElementById('review-text').value.trim();
+    var evtId = window._currentEvtId;
+    if (!evtId) return;
+    saveReview(evtId, reviewRating, text, window._reviewPhoto || null);
+    showToast('Ressenya publicada!');
     closeReviewModal();
+    var evt = null;
+    for (var i = 0; i < allEvents.length; i++) {
+      if (allEvents[i].id === evtId) { evt = allEvents[i]; break; }
+    }
+    if (evt) setTimeout(function(){ openPanel(evt); }, 1500);
+  });
+
+  document.getElementById('review-photo').addEventListener('change', function(e) {
+    var file = e.target.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      window._reviewPhoto = ev.target.result;
+      document.getElementById('photo-preview').innerHTML =
+        '<img src="' + ev.target.result + '" style="width:80px;height:80px;object-fit:cover;border-radius:8px"/>';
+    };
+    reader.readAsDataURL(file);
   });
 
   document.getElementById('btn-refresh').addEventListener('click', function() {
@@ -77,9 +100,7 @@ window.addEventListener('load', function() {
   document.getElementById('btn-locate').addEventListener('click', getLocation);
   getLocation();
 
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
-  }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 });
 
 function renderEvents() {
@@ -106,29 +127,44 @@ function renderEvents() {
 }
 
 function openPanel(evt) {
-  var content = document.getElementById('panel-content');
-  var priceTag = evt.free
-    ? '<span class="tag tag-free">Gratuit</span>'
-    : '<span class="tag tag-paid">' + (evt.price || 'De pagament') + '</span>';
-  var familyTag = evt.family ? '<span class="tag tag-family">Familia</span>' : '';
-  content.innerHTML =
-    '<div class="event-title">' + evt.title + '</div>' +
-    '<div class="event-meta">' + priceTag + familyTag +
-    '<span class="tag tag-category">' + evt.category + '</span>' +
-    '<span class="tag tag-category">' + (evt.time || '') + '</span></div>' +
-    '<div class="event-location">📍 <strong>' + evt.location + '</strong></div>' +
-    '<p class="event-desc">' + evt.description + '</p>' +
-    '<div class="panel-actions">' +
-    '<button class="btn-primary" onclick="if(window._startAR)window._startAR(\'' + evt.id + '\')">📷 AR</button>' +
-    '<button class="btn-secondary" onclick="window.open(\'https://www.google.com/maps/dir/?api=1&destination=' + evt.lat + ',' + evt.lng + '\')">🗺️ Maps</button>' +
-    '</div>' +
-    '<div class="panel-actions" style="margin-top:8px">' +
-    '<button class="btn-secondary" onclick="openReviewModal()">Ressenya</button>' +
-    '</div>';
+  window._currentEvtId = evt.id;
   var panel = document.getElementById('event-panel');
+  var content = document.getElementById('panel-content');
+  content.innerHTML = '<div style="text-align:center;padding:20px;color:#9a9ab0">Carregant ressenyes...</div>';
   panel.classList.remove('hidden');
   setTimeout(function() { panel.classList.add('open'); }, 10);
   map.flyTo([evt.lat, evt.lng], 16, {duration: 0.8});
+
+  getReviews(evt.id, function(reviews) {
+    var avgHtml = '';
+    if (reviews.length > 0) {
+      var avg = reviews.reduce(function(s,r){ return s + r.rating; }, 0) / reviews.length;
+      avgHtml = '<div style="color:#f59e0b;margin-bottom:8px">★ ' + avg.toFixed(1) +
+        ' <span style="color:#9a9ab0;font-size:12px">(' + reviews.length + ' ressenya' + (reviews.length > 1 ? 'es' : '') + ')</span></div>';
+    }
+    var priceTag = evt.free ? '<span class="tag tag-free">Gratuit</span>' : '<span class="tag tag-paid">' + (evt.price || 'De pagament') + '</span>';
+    var familyTag = evt.family ? '<span class="tag tag-family">Familia</span>' : '';
+    content.innerHTML =
+      '<div class="event-title">' + evt.title + '</div>' +
+      avgHtml +
+      '<div class="event-meta">' + priceTag + familyTag +
+        '<span class="tag tag-category">' + evt.category + '</span>' +
+        '<span class="tag tag-category">' + (evt.time || '') + '</span>' +
+      '</div>' +
+      '<div class="event-location">📍 <strong>' + evt.location + '</strong></div>' +
+      '<p class="event-desc">' + evt.description + '</p>' +
+      '<div class="panel-actions">' +
+        '<button class="btn-primary" onclick="if(window._startAR)window._startAR(\'' + evt.id + '\')">📷 AR</button>' +
+        '<button class="btn-secondary" onclick="window.open(\'https://www.google.com/maps/dir/?api=1&destination=' + evt.lat + ',' + evt.lng + '\')">🗺️ Maps</button>' +
+      '</div>' +
+      '<div class="panel-actions" style="margin-top:8px">' +
+        '<button class="btn-secondary" onclick="openReviewModal()">Escriure ressenya</button>' +
+      '</div>' +
+      '<div class="reviews-section">' +
+        '<div class="reviews-title">Ressenyes d\'avui (' + reviews.length + ')</div>' +
+        renderReviews(reviews) +
+      '</div>';
+  });
 }
 
 function closePanel() {
@@ -137,13 +173,46 @@ function closePanel() {
   setTimeout(function() { panel.classList.add('hidden'); }, 350);
 }
 
+function saveReview(eventId, rating, text, photo) {
+  var today = new Date().toISOString().split('T')[0];
+  fetch(WORKER_URL + '/reviews', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({eventId: eventId, date: today, rating: rating, text: text, photo: photo || null, timestamp: Date.now()})
+  });
+}
+
+function getReviews(eventId, callback) {
+  var today = new Date().toISOString().split('T')[0];
+  fetch(WORKER_URL + '/reviews?eventId=' + eventId + '&date=' + today)
+    .then(function(r) { return r.json(); })
+    .then(function(d) { callback(d.reviews || []); })
+    .catch(function() { callback([]); });
+}
+
+function renderReviews(reviews) {
+  if (!reviews.length) return '<p class="no-reviews">Sigues el primer avui!</p>';
+  var html = '';
+  reviews.forEach(function(r) {
+    var stars = '';
+    for (var i = 1; i <= 5; i++) stars += i <= r.rating ? '★' : '☆';
+    var time = new Date(r.timestamp).toLocaleTimeString('ca', {hour:'2-digit', minute:'2-digit'});
+    html += '<div class="review-item">' +
+      '<div class="review-header"><span class="review-stars">' + stars + '</span><span class="review-time">' + time + '</span></div>' +
+      (r.text ? '<div class="review-text">' + r.text + '</div>' : '') +
+      (r.photo ? '<img class="review-photo" src="' + r.photo + '" alt="foto"/>' : '') +
+      '</div>';
+  });
+  return html;
+}
+
 function renderList() {
   var html = '';
   filteredEvents.forEach(function(evt) {
     html += '<div class="list-item" onclick="flyToEvent(\'' + evt.id + '\')">' +
       '<div class="list-item-title">' + (ICONS[evt.category]||'📍') + ' ' + evt.title + '</div>' +
       '<div class="list-item-sub"><span>' + (evt.time||'') + '</span>' +
-      (evt.free ? '<span class="dot-free">Gratuit</span>' : '') + '</div></div>';
+      (evt.free ? '<span class="dot-free"> Gratuit</span>' : '') + '</div></div>';
   });
   document.getElementById('list-items').innerHTML = html;
 }
@@ -151,8 +220,9 @@ function renderList() {
 function flyToEvent(id) {
   for (var i = 0; i < filteredEvents.length; i++) {
     if (filteredEvents[i].id === id) {
-      map.flyTo([filteredEvents[i].lat, filteredEvents[i].lng], 16, {duration: 0.8});
-      setTimeout(function(e){ openPanel(e); }(filteredEvents[i]), 500);
+      var evt = filteredEvents[i];
+      map.flyTo([evt.lat, evt.lng], 16, {duration: 0.8});
+      setTimeout(function(){ openPanel(evt); }, 500);
       var list = document.getElementById('event-list');
       list.classList.remove('open');
       setTimeout(function() { list.classList.add('hidden'); }, 300);
@@ -178,7 +248,9 @@ function openReviewModal() { document.getElementById('review-modal').classList.r
 function closeReviewModal() {
   document.getElementById('review-modal').classList.add('hidden');
   document.getElementById('review-text').value = '';
+  document.getElementById('photo-preview').innerHTML = '';
   reviewRating = 0;
+  window._reviewPhoto = null;
   document.querySelectorAll('.star').forEach(function(s) { s.classList.remove('active'); });
 }
 function showToast(msg) {
