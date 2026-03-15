@@ -5,11 +5,18 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Star, Send } from 'lucide-react';
 
-// 1. TU BACKEND DE REVIEWS (Google Sheets)
+// 1. BACKEND DE REVIEWS (Google Sheets)
 const GOOGLE_SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbwrfFDz4ffbYEBjor4jRZazCQxsvrejKp3aJYYVIQCO3gMai0oZTQaN18pn7AUObqO0/exec";
 
-// 2. EL ENDPOINT DIARIO
+// 2. ENDPOINT DIARIO
 const AGENDA_DIARIA_URL = "https://opendata-ajuntament.barcelona.cat/data/api/action/datastore_search?resource_id=877ccf66-9106-4ae2-be51-95a9f6469e4c&limit=300";
+
+// 🛡️ ESCUDO DE DATOS GLOBAL (Fuera del componente para evitar el ReferenceError)
+const textoSeguro = (valor, porDefecto) => {
+  if (!valor) return porDefecto;
+  if (typeof valor === 'object') return porDefecto; 
+  return String(valor);
+};
 
 export default function MapViewer() {
   const [eventos, setEventos] = useState([]);
@@ -18,14 +25,6 @@ export default function MapViewer() {
   const [nuevoComentario, setNuevoComentario] = useState("");
   const [nuevoUsuario, setNuevoUsuario] = useState("");
   const [enviando, setEnviando] = useState(false);
-
-  // 🛡️ ESCUDO DE DATOS: Previene el error "Objects are not valid as a React child"
-  const textoSeguro = (valor, porDefecto) => {
-    if (!valor) return porDefecto;
-    // Si la API manda un objeto en lugar de texto, lo neutralizamos
-    if (typeof valor === 'object') return porDefecto; 
-    return String(valor);
-  };
 
   useEffect(() => {
     const fetchAgendaHoy = async () => {
@@ -36,7 +35,7 @@ export default function MapViewer() {
         const records = data.result.records
           .filter(r => r.geo_epgs_4326_lat && r.geo_epgs_4326_lon) 
           .map(r => {
-            // Pasamos todos los campos vulnerables por el Escudo
+            // Usamos el Escudo Global para limpiar los datos
             const dir = textoSeguro(r.addresses_main_address, "");
             const dist = textoSeguro(r.addresses_district_name, "");
             
