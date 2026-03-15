@@ -31,7 +31,6 @@ window.addEventListener('load', function() {
     {id:'e8',title:'Visita Guiada Modernisme',category:'culture',lat:41.3917,lng:2.1649,free:false,family:false,time:'10:30 i 16:30',location:'Placa Catalunya',description:'Edificis modernistes fora dels circuits.',price:'15 euros'}
   ];
   window.allEvents = allEvents;
-
   renderEvents();
   document.getElementById('loading-overlay').classList.add('hidden');
 
@@ -96,10 +95,8 @@ window.addEventListener('load', function() {
   document.getElementById('btn-refresh').addEventListener('click', function() {
     showToast('Actualitzat!');
   });
-
   document.getElementById('btn-locate').addEventListener('click', getLocation);
   getLocation();
-
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 });
 
@@ -134,13 +131,11 @@ function openPanel(evt) {
   panel.classList.remove('hidden');
   setTimeout(function() { panel.classList.add('open'); }, 10);
   map.flyTo([evt.lat, evt.lng], 16, {duration: 0.8});
-
   getReviews(evt.id, function(reviews) {
     var avgHtml = '';
     if (reviews.length > 0) {
       var avg = reviews.reduce(function(s,r){ return s + r.rating; }, 0) / reviews.length;
-      avgHtml = '<div style="color:#f59e0b;margin-bottom:8px">★ ' + avg.toFixed(1) +
-        ' <span style="color:#9a9ab0;font-size:12px">(' + reviews.length + ' ressenya' + (reviews.length > 1 ? 'es' : '') + ')</span></div>';
+      avgHtml = '<div style="color:#f59e0b;margin-bottom:8px">★ ' + avg.toFixed(1) + ' <span style="color:#9a9ab0;font-size:12px">(' + reviews.length + ' ressenya' + (reviews.length > 1 ? 'es' : '') + ')</span></div>';
     }
     var priceTag = evt.free ? '<span class="tag tag-free">Gratuit</span>' : '<span class="tag tag-paid">' + (evt.price || 'De pagament') + '</span>';
     var familyTag = evt.family ? '<span class="tag tag-family">Familia</span>' : '';
@@ -149,7 +144,7 @@ function openPanel(evt) {
       avgHtml +
       '<div class="event-meta">' + priceTag + familyTag +
         '<span class="tag tag-category">' + evt.category + '</span>' +
-        '<span class="tag tag-category">' + (evt.time || '') + '</span>' +
+        '<span class="tag tag-category">' + (evt.time||'') + '</span>' +
       '</div>' +
       '<div class="event-location">📍 <strong>' + evt.location + '</strong></div>' +
       '<p class="event-desc">' + evt.description + '</p>' +
@@ -179,6 +174,12 @@ function saveReview(eventId, rating, text, photo) {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({eventId: eventId, date: today, rating: rating, text: text, photo: photo || null, timestamp: Date.now()})
+  }).then(function(r) {
+    return r.json();
+  }).then(function(d) {
+    console.log('Review saved:', d);
+  }).catch(function(e) {
+    console.error('Review error:', e);
   });
 }
 
@@ -187,7 +188,10 @@ function getReviews(eventId, callback) {
   fetch(WORKER_URL + '/reviews?eventId=' + eventId + '&date=' + today)
     .then(function(r) { return r.json(); })
     .then(function(d) { callback(d.reviews || []); })
-    .catch(function() { callback([]); });
+    .catch(function(e) {
+      console.error('Get reviews error:', e);
+      callback([]);
+    });
 }
 
 function renderReviews(reviews) {
