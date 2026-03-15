@@ -8,7 +8,7 @@ import { Star, Send } from 'lucide-react';
 // 1. TU BACKEND DE REVIEWS (Google Sheets)
 const GOOGLE_SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbwrfFDz4ffbYEBjor4jRZazCQxsvrejKp3aJYYVIQCO3gMai0oZTQaN18pn7AUObqO0/exec";
 
-// 2. EL ENDPOINT DIARIO QUE ENCONTRASTE (Límite 300 para asegurar que entran todos los de hoy)
+// 2. EL ENDPOINT DIARIO
 const AGENDA_DIARIA_URL = "https://opendata-ajuntament.barcelona.cat/data/api/action/datastore_search?resource_id=877ccf66-9106-4ae2-be51-95a9f6469e4c&limit=300";
 
 export default function MapViewer() {
@@ -19,24 +19,36 @@ export default function MapViewer() {
   const [nuevoUsuario, setNuevoUsuario] = useState("");
   const [enviando, setEnviando] = useState(false);
 
+  // 🛡️ ESCUDO DE DATOS: Previene el error "Objects are not valid as a React child"
+  const textoSeguro = (valor, porDefecto) => {
+    if (!valor) return porDefecto;
+    // Si la API manda un objeto en lugar de texto, lo neutralizamos
+    if (typeof valor === 'object') return porDefecto; 
+    return String(valor);
+  };
+
   useEffect(() => {
-    // A. CARGAR LA AGENDA DE HOY
     const fetchAgendaHoy = async () => {
       try {
         const res = await fetch(AGENDA_DIARIA_URL);
         const data = await res.json();
         
-        // Mapeamos usando EXACTAMENTE los campos que descubriste
         const records = data.result.records
-          .filter(r => r.geo_epgs_4326_lat && r.geo_epgs_4326_lon) // Solo los que tienen ubicación real
-          .map(r => ({
-            id: r._id,
-            name: r.name,
-            pos: [parseFloat(r.geo_epgs_4326_lat), parseFloat(r.geo_epgs_4326_lon)],
-            categoria: r.secondary_filters_name || "Esdeveniment",
-            horari: r.timetable || "Horari no especificat",
-            direccion: r.addresses_main_address ? `${r.addresses_main_address} (${r.addresses_district_name})` : "Barcelona"
-          }));
+          .filter(r => r.geo_epgs_4326_lat && r.geo_epgs_4326_lon) 
+          .map(r => {
+            // Pasamos todos los campos vulnerables por el Escudo
+            const dir = textoSeguro(r.addresses_main_address, "");
+            const dist = textoSeguro(r.addresses_district_name, "");
+            
+            return {
+              id: r._id,
+              name: textoSeguro(r.name, "Esdeveniment sense nom"),
+              pos: [parseFloat(r.geo_epgs_4326_lat), parseFloat(r.geo_epgs_4326_lon)],
+              categoria: textoSeguro(r.secondary_filters_name, "Esdeveniment"),
+              horari: textoSeguro(r.timetable, "Horari no especificat"),
+              direccion: dir ? `${dir} ${dist ? `(${dist})` : ''}` : "Barcelona"
+            };
+          });
         
         setEventos(records);
       } catch (e) { 
@@ -44,7 +56,6 @@ export default function MapViewer() {
       }
     };
 
-    // B. CARGAR LOS COMENTARIOS DE LA COMUNIDAD
     const fetchReviews = async () => {
       try {
         const res = await fetch(GOOGLE_SHEETS_API_URL);
@@ -59,7 +70,6 @@ export default function MapViewer() {
     fetchReviews();
   }, []);
 
-  // C. ENVIAR NUEVOS COMENTARIOS
   const enviarReview = async (evento_id, e) => {
     e.preventDefault();
     if(!nuevoUsuario.trim() || !nuevoComentario.trim()) return;
@@ -78,7 +88,6 @@ export default function MapViewer() {
         })
       });
       
-      // Mostrar al instante en pantalla
       setReviews(prev => [...prev, { 
         evento_id: evento_id, 
         usuario: nuevoUsuario, 
@@ -95,7 +104,6 @@ export default function MapViewer() {
     }
   };
 
-  // D. ICONO DEL MAPA
   const eventIcon = L.divIcon({ 
     html: `<div style="background:#2563eb;width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(37,99,235,0.8);"></div>`, 
     className: 'custom-icon' 
@@ -103,16 +111,8 @@ export default function MapViewer() {
 
   return (
     <div className="h-screen w-screen absolute inset-0 bg-[#0f172a]">
-      <MapContainer 
-        center={[41.387, 2.170]} 
-        zoom={13} 
-        className="h-full w-full z-0" 
-        zoomControl={false}
-      >
-        <TileLayer 
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" 
-          attribution='&copy; Open Data BCN'
-        />
+      <MapContainer center={[41.387, 2.170]} zoom={13} className="h-full w-full z-0" zoomControl={false}>
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" attribution='&copy; Open Data BCN' />
         
         {eventos.map(ev => {
           const evReviews = reviews.filter(r => r.evento_id === ev.id.toString());
@@ -126,7 +126,6 @@ export default function MapViewer() {
                   <p className="text-[11px] font-bold text-slate-500 mb-1">📍 {ev.direccion}</p>
                   <p className="text-[11px] font-bold text-slate-500 mb-3 border-b border-slate-200 pb-2">🕒 {ev.horari}</p>
                   
-                  {/* FEED DE LA COMUNIDAD */}
                   <div className="bg-[#f8fafc] p-2 rounded-lg mt-2 border border-slate-200">
                     <h4 className="text-[10px] font-black text-slate-700 uppercase mb-2 flex items-center gap-1">
                       <Star size={12} className="text-amber-500" /> Estat en viu ({evReviews.length})
@@ -146,32 +145,10 @@ export default function MapViewer() {
                     </div>
 
                     <form onSubmit={(e) => enviarReview(ev.id.toString(), e)} className="flex flex-col gap-1.5 border-t border-slate-200 pt-2">
-                      <input 
-                        type="text" 
-                        placeholder="El teu àlies..." 
-                        className="text-[11px] p-1.5 border border-slate-300 rounded focus:outline-none focus:border-blue-500" 
-                        value={nuevoUsuario} 
-                        onChange={e => setNuevoUsuario(e.target.value)} 
-                        disabled={enviando}
-                        required
-                      />
+                      <input type="text" placeholder="El teu àlies..." className="text-[11px] p-1.5 border border-slate-300 rounded focus:outline-none focus:border-blue-500" value={nuevoUsuario} onChange={e => setNuevoUsuario(e.target.value)} disabled={enviando} required />
                       <div className="flex gap-1.5">
-                        <input 
-                          type="text" 
-                          placeholder="Què està passant ara?" 
-                          className="text-[11px] p-1.5 border border-slate-300 rounded flex-grow focus:outline-none focus:border-blue-500" 
-                          value={nuevoComentario} 
-                          onChange={e => setNuevoComentario(e.target.value)} 
-                          disabled={enviando}
-                          required
-                        />
-                        <button 
-                          type="submit" 
-                          disabled={enviando} 
-                          className={`text-white px-3 rounded flex items-center justify-center font-bold ${enviando ? 'bg-slate-400' : 'bg-blue-600 hover:bg-blue-700'}`}
-                        >
-                          <Send size={12} />
-                        </button>
+                        <input type="text" placeholder="Què està passant ara?" className="text-[11px] p-1.5 border border-slate-300 rounded flex-grow focus:outline-none focus:border-blue-500" value={nuevoComentario} onChange={e => setNuevoComentario(e.target.value)} disabled={enviando} required />
+                        <button type="submit" disabled={enviando} className={`text-white px-3 rounded flex items-center justify-center font-bold ${enviando ? 'bg-slate-400' : 'bg-blue-600 hover:bg-blue-700'}`}><Send size={12} /></button>
                       </div>
                     </form>
                   </div>
