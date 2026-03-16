@@ -42,13 +42,21 @@ function initMap() {
 
 function loadEvents() {
   var today = new Date().toISOString().split('T')[0];
-  var sql = "SELECT * FROM \"877ccf66-9106-4ae2-be51-95a9f6469e4c\" WHERE start_date <= '" + today + "T23:59:59' AND end_date >= '" + today + "T00:00:00' LIMIT 500";
+  var sql = 'SELECT * FROM "877ccf66-9106-4ae2-be51-95a9f6469e4c" WHERE start_date <= \'' + today + 'T23:59:59\' AND end_date >= \'' + today + 'T00:00:00\' LIMIT 500';
   var url = 'https://opendata-ajuntament.barcelona.cat/data/api/action/datastore_search_sql?sql=' + encodeURIComponent(sql);
 
+  showToast('⏳ Carregant esdeveniments…');
+
   fetch(url)
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
     .then(function(data) {
+      if (!data.success) throw new Error('API error: ' + JSON.stringify(data.error));
       var records = (data.result && data.result.records) || [];
+      console.log('Events from API:', records.length);
+
       if (records.length > 0) {
         allEvents = records.map(function(item) {
           var lat = parseFloat(item.geo_epgs_4326_lat);
@@ -65,7 +73,6 @@ function loadEvents() {
           if (item.addresses_road_name) {
             address = item.addresses_road_name;
             if (item.addresses_start_street_number) address += ', ' + item.addresses_start_street_number;
-            if (item.addresses_zip_code) address += ' (CP: ' + item.addresses_zip_code + ')';
           }
 
           var description = item.values_description || item.values_value || '';
@@ -93,24 +100,25 @@ function loadEvents() {
             location: address || 'Barcelona',
             neighborhood: item.addresses_neighborhood_name || '',
             district: item.addresses_district_name || '',
-            zipCode: item.addresses_zip_code || '',
             description: description,
             organizer: item.institution_name || '',
             tags: tags,
-            url: guiaUrl,
-            registerId: registerId
+            url: guiaUrl
           };
         });
       } else {
+        console.warn('No events for today, using fallback');
         allEvents = getFallback();
       }
+
       window.allEvents = allEvents;
       renderEvents();
       document.getElementById('loading-overlay').classList.add('hidden');
       showToast('✅ ' + allEvents.length + ' esdeveniments avui');
     })
     .catch(function(err) {
-      console.error('Error carregant events:', err);
+      console.error('loadEvents error:', err);
+      showToast('⚠️ Error: ' + err.message);
       allEvents = getFallback();
       window.allEvents = allEvents;
       renderEvents();
