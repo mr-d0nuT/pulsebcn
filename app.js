@@ -42,22 +42,15 @@ function initMap() {
 
 function loadEvents() {
   var today = new Date().toISOString().split('T')[0];
-  var url = API_BCN + '?resource_id=' + RESOURCE_ID + '&limit=500';
+  var sql = "SELECT * FROM \"877ccf66-9106-4ae2-be51-95a9f6469e4c\" WHERE start_date <= '" + today + "T23:59:59' AND end_date >= '" + today + "T00:00:00' LIMIT 500";
+  var url = 'https://opendata-ajuntament.barcelona.cat/data/api/action/datastore_search_sql?sql=' + encodeURIComponent(sql);
 
   fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var records = (data.result && data.result.records) || [];
-
-      var filtered = records.filter(function(item) {
-        if (!item.start_date) return false;
-        var start = item.start_date.split('T')[0];
-        var end = item.end_date ? item.end_date.split('T')[0] : start;
-        return start <= today && today <= end;
-      });
-
-      if (filtered.length > 0) {
-        allEvents = filtered.map(function(item) {
+      if (records.length > 0) {
+        allEvents = records.map(function(item) {
           var lat = parseFloat(item.geo_epgs_4326_lat);
           var lng = parseFloat(item.geo_epgs_4326_lon);
           if (isNaN(lat)) lat = BCN_CENTER[0] + (Math.random()-0.5)*0.04;
@@ -111,13 +104,13 @@ function loadEvents() {
       } else {
         allEvents = getFallback();
       }
-
       window.allEvents = allEvents;
       renderEvents();
       document.getElementById('loading-overlay').classList.add('hidden');
       showToast('✅ ' + allEvents.length + ' esdeveniments avui');
     })
-    .catch(function() {
+    .catch(function(err) {
+      console.error('Error carregant events:', err);
       allEvents = getFallback();
       window.allEvents = allEvents;
       renderEvents();
