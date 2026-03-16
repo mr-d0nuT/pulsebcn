@@ -171,3 +171,11 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
   .panel { max-width: 460px; left: auto; right: 20px; bottom: 20px; border-radius: var(--radius); }
   .fab { bottom: 40px; right: 40px; }
 }
+.info-blocks { margin: 16px 0; display: flex; flex-direction: column; gap: 10px; }
+.info-block { display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: var(--surface); border-radius: 10px; }
+.info-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+.info-block strong { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); display: block; margin-bottom: 2px; }
+.info-block a { text-decoration: none; }
+.info-block a:hover { text-decoration: underline; }
+.info-block div { font-size: 14px; color: var(--text); line-height: 1.5; }
+.info-block small { font-size: 12px; color: var(--text2); }
