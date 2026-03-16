@@ -42,14 +42,22 @@ function initMap() {
 
 function loadEvents() {
   var today = new Date().toISOString().split('T')[0];
-  var url = API_BCN + '?resource_id=' + RESOURCE_ID + '&limit=100&filters=' + encodeURIComponent(JSON.stringify({start_date: today}));
+  var url = API_BCN + '?resource_id=' + RESOURCE_ID + '&limit=500';
 
   fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var records = (data.result && data.result.records) || [];
-      if (records.length > 0) {
-        allEvents = records.map(function(item) {
+
+      var filtered = records.filter(function(item) {
+        if (!item.start_date) return false;
+        var start = item.start_date.split('T')[0];
+        var end = item.end_date ? item.end_date.split('T')[0] : start;
+        return start <= today && today <= end;
+      });
+
+      if (filtered.length > 0) {
+        allEvents = filtered.map(function(item) {
           var lat = parseFloat(item.geo_epgs_4326_lat);
           var lng = parseFloat(item.geo_epgs_4326_lon);
           if (isNaN(lat)) lat = BCN_CENTER[0] + (Math.random()-0.5)*0.04;
@@ -69,9 +77,9 @@ function loadEvents() {
 
           var description = item.values_description || item.values_value || '';
           if (!description && item.secondary_filters_fullpath) {
-            description = item.secondary_filters_fullpath.replace(/\//g, ' · ');
+            description = item.secondary_filters_fullpath.replace(/\//g,' · ');
           }
-          if (!description) description = 'Esdeveniment a Barcelona. Clica "Més info" per a tots els detalls.';
+          if (!description) description = 'Clica "Més info" per veure tots els detalls a la Guia Barcelona.';
 
           var tags = [];
           if (item.values_category) tags.push(item.values_category);
@@ -82,8 +90,7 @@ function loadEvents() {
             id: 'bcn-' + item._id,
             title: item.name || 'Esdeveniment',
             category: mapCategory(item.secondary_filters_name || item.values_category || ''),
-            lat: lat,
-            lng: lng,
+            lat: lat, lng: lng,
             free: isFree(item.values_value || ''),
             family: isFamily(item.secondary_filters_name || ''),
             time: item.timetable || formatDate(item.start_date, item.end_date),
@@ -104,10 +111,11 @@ function loadEvents() {
       } else {
         allEvents = getFallback();
       }
+
       window.allEvents = allEvents;
       renderEvents();
       document.getElementById('loading-overlay').classList.add('hidden');
-      showToast('✅ ' + allEvents.length + ' esdeveniments carregats');
+      showToast('✅ ' + allEvents.length + ' esdeveniments avui');
     })
     .catch(function() {
       allEvents = getFallback();
