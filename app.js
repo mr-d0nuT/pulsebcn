@@ -1,5 +1,5 @@
 var SCRIPTS_URL = 'https://script.google.com/macros/s/AKfycbyPaggyUpVFeTTkJQMA0XvR6dYzKR1BuLYsr7HAvzOh9BP3WQ3EmdReACS7gnSnPn-0/exec';
-var API_BCN = 'https://opendata-ajuntament.barcelona.cat/data/api/action/datastore_search';
+var API_URL = 'https://opendata-ajuntament.barcelona.cat/data/api/action/datastore_search_sql';
 var RESOURCE_ID = '877ccf66-9106-4ae2-be51-95a9f6469e4c';
 var BCN_CENTER = [41.3851, 2.1734];
 
@@ -12,8 +12,16 @@ var markers = [];
 var activeFilter = 'all';
 var reviewRating = 0;
 
-var ICONS = {cultura:'🎭',musica:'🎵',esport:'⚽',cinema:'🎬',protest:'📣',familia:'👨‍👩‍👧',exposicio:'🖼️',menjar:'🍽️',default:'📍'};
-var COLORS = {cultura:'#a855f7',musica:'#3b82f6',esport:'#22c55e',cinema:'#f59e0b',protest:'#ef4444',familia:'#06b6d4',exposicio:'#8b5cf6',menjar:'#f97316',default:'#e94560'};
+var ICONS = {
+  cultura:'🎭', musica:'🎵', esport:'⚽', cinema:'🎬',
+  exposicio:'🖼️', menjar:'🍽️', familia:'👨‍👩‍👧', natura:'🌿',
+  congrés:'🎤', festa:'🎉', default:'📍'
+};
+var COLORS = {
+  cultura:'#a855f7', musica:'#3b82f6', esport:'#22c55e', cinema:'#f59e0b',
+  exposicio:'#8b5cf6', menjar:'#f97316', familia:'#06b6d4', natura:'#16a34a',
+  congrés:'#0ea5e9', festa:'#ec4899', default:'#e94560'
+};
 
 window.addEventListener('load', function() {
   initMap();
@@ -40,12 +48,55 @@ function initMap() {
   map.on('click', closePanel);
 }
 
+function mapCategory(raw) {
+  var r = (raw || '').toLowerCase();
+  if (r.includes('música') || r.includes('music') || r.includes('concert') || r.includes('cantada') || r.includes('coral') || r.includes('jazz') || r.includes('rock') || r.includes('clàssica')) return 'musica';
+  if (r.includes('cinema') || r.includes('film') || r.includes('pel·l') || r.includes('video') || r.includes('audiovisual')) return 'cinema';
+  if (r.includes('exposic') || r.includes('museu') || r.includes('galeria') || r.includes('art visual') || r.includes('fotograf')) return 'exposicio';
+  if (r.includes('esport') || r.includes('sport') || r.includes('futbol') || r.includes('bàsquet') || r.includes('natació') || r.includes('running') || r.includes('tennis')) return 'esport';
+  if (r.includes('mercat') || r.includes('gastr') || r.includes('cuina') || r.includes('tast') || r.includes('fira') || r.includes('food')) return 'menjar';
+  if (r.includes('infant') || r.includes('famil') || r.includes('nen') || r.includes('bressol') || r.includes('escola') || r.includes('jovent')) return 'familia';
+  if (r.includes('natura') || r.includes('medi ambient') || r.includes('jardí') || r.includes('parc') || r.includes('botànic')) return 'natura';
+  if (r.includes('congrés') || r.includes('jornada') || r.includes('conferència') || r.includes('simposi') || r.includes('seminari')) return 'congrés';
+  if (r.includes('festa') || r.includes('celebrac') || r.includes('carnestoltes') || r.includes('revetlla') || r.includes('aplec')) return 'festa';
+  if (r.includes('teatre') || r.includes('dansa') || r.includes('circ') || r.includes('espect') || r.includes('performance') || r.includes('ballet')) return 'cultura';
+  return 'cultura';
+}
+
+function isFree(val) {
+  if (!val || val.trim() === '') return false;
+  var v = val.toLowerCase().trim();
+  return v === 'gratuït' || v === 'gratuit' || v === 'gratis' || v === 'free' || v === '0' || v.includes('gratuït') || v.includes('gratuit') || v.includes('entrada lliure') || v.includes('accés lliure');
+}
+
+function formatDate(start, end) {
+  if (!start) return '';
+  try {
+    var s = new Date(start);
+    var e = end ? new Date(end) : null;
+    var pad = function(n){ return n.toString().padStart(2,'0'); };
+    var sh = s.getHours();
+    var sm = s.getMinutes();
+    if (sh === 3 && sm === 0) return '';
+    var timeStr = pad(sh) + ':' + pad(sm);
+    if (e && !(e.getHours() === 3 && e.getMinutes() === 0)) {
+      timeStr += '–' + pad(e.getHours()) + ':' + pad(e.getMinutes());
+    }
+    return timeStr;
+  } catch(ex) { return ''; }
+}
+
+function formatFullDate(dateStr) {
+  if (!dateStr) return '';
+  try {
+    return new Date(dateStr).toLocaleDateString('ca', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  } catch(e) { return ''; }
+}
+
 function loadEvents() {
   var today = new Date().toISOString().split('T')[0];
-  var sql = 'SELECT * FROM "877ccf66-9106-4ae2-be51-95a9f6469e4c" WHERE start_date <= \'' + today + 'T23:59:59\' AND end_date >= \'' + today + 'T00:00:00\' LIMIT 500';
-  var url = 'https://opendata-ajuntament.barcelona.cat/data/api/action/datastore_search_sql?sql=' + encodeURIComponent(sql);
-
-  showToast('⏳ Carregant esdeveniments…');
+  var sql = 'SELECT * FROM "' + RESOURCE_ID + '" WHERE start_date <= \'' + today + 'T23:59:59\' AND end_date >= \'' + today + 'T00:00:00\' LIMIT 500';
+  var url = API_URL + '?sql=' + encodeURIComponent(sql);
 
   fetch(url)
     .then(function(r) {
@@ -53,7 +104,7 @@ function loadEvents() {
       return r.json();
     })
     .then(function(data) {
-      if (!data.success) throw new Error('API error: ' + JSON.stringify(data.error));
+      if (!data.success) throw new Error('API error');
       var records = (data.result && data.result.records) || [];
       console.log('Events from API:', records.length);
 
@@ -73,6 +124,7 @@ function loadEvents() {
           if (item.addresses_road_name) {
             address = item.addresses_road_name;
             if (item.addresses_start_street_number) address += ', ' + item.addresses_start_street_number;
+            if (item.addresses_zip_code) address += ' (CP: ' + item.addresses_zip_code + ')';
           }
 
           var description = item.values_description || item.values_value || '';
@@ -86,14 +138,16 @@ function loadEvents() {
           if (item.secondary_filters_name) tags.push(item.secondary_filters_name);
           if (item.values_outstanding === 'True') tags.push('⭐ Destacat');
 
+          var cat = mapCategory(item.secondary_filters_name || item.values_category || item.secondary_filters_fullpath || item.secondary_filters_tree || '');
+
           return {
             id: 'bcn-' + item._id,
             title: item.name || 'Esdeveniment',
-            category: mapCategory(item.secondary_filters_name || item.values_category || ''),
+            category: cat,
             lat: lat, lng: lng,
             free: isFree(item.values_value || ''),
-            family: isFamily(item.secondary_filters_name || ''),
-            time: item.timetable || formatDate(item.start_date, item.end_date),
+            family: isFamily(item.secondary_filters_name || item.secondary_filters_fullpath || ''),
+            time: item.timetable ? item.timetable.trim() : formatDate(item.start_date, item.end_date),
             startDate: item.start_date,
             endDate: item.end_date,
             estimatedDates: item.estimated_dates || '',
@@ -107,7 +161,6 @@ function loadEvents() {
           };
         });
       } else {
-        console.warn('No events for today, using fallback');
         allEvents = getFallback();
       }
 
@@ -118,56 +171,17 @@ function loadEvents() {
     })
     .catch(function(err) {
       console.error('loadEvents error:', err);
-      showToast('⚠️ Error: ' + err.message);
       allEvents = getFallback();
       window.allEvents = allEvents;
       renderEvents();
       document.getElementById('loading-overlay').classList.add('hidden');
+      showToast('⚠️ Usant dades locals');
     });
-}
-
-function mapCategory(raw) {
-  var r = (raw || '').toLowerCase();
-  if (r.includes('music') || r.includes('concert') || r.includes('música')) return 'musica';
-  if (r.includes('cinema') || r.includes('film') || r.includes('pel·l')) return 'cinema';
-  if (r.includes('teatre') || r.includes('dansa') || r.includes('espect')) return 'cultura';
-  if (r.includes('exposic') || r.includes('museu') || r.includes('art')) return 'exposicio';
-  if (r.includes('esport') || r.includes('sport') || r.includes('futbol')) return 'esport';
-  if (r.includes('mercat') || r.includes('gastr') || r.includes('food')) return 'menjar';
-  if (r.includes('infant') || r.includes('famil') || r.includes('nen')) return 'familia';
-  return 'cultura';
-}
-
-function isFree(val) {
-  var v = (val || '').toLowerCase();
-  return v === '' || v.includes('gratuit') || v.includes('gratis') || v.includes('free') || v === '0';
 }
 
 function isFamily(val) {
   var v = (val || '').toLowerCase();
-  return v.includes('famil') || v.includes('infant') || v.includes('nen');
-}
-
-function formatDate(start, end) {
-  if (!start) return '';
-  try {
-    var s = new Date(start);
-    var pad = function(n){return n.toString().padStart(2,'0');};
-    var timeStr = pad(s.getHours()) + ':' + pad(s.getMinutes());
-    if (end) {
-      var e = new Date(end);
-      timeStr += '–' + pad(e.getHours()) + ':' + pad(e.getMinutes());
-    }
-    return timeStr;
-  } catch(ex) { return ''; }
-}
-
-function formatFullDate(dateStr) {
-  if (!dateStr) return '';
-  try {
-    var d = new Date(dateStr);
-    return d.toLocaleDateString('ca', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
-  } catch(e) { return ''; }
+  return v.includes('famil') || v.includes('infant') || v.includes('nen') || v.includes('bressol') || v.includes('jovent');
 }
 
 function renderEvents() {
@@ -209,55 +223,44 @@ function openPanel(evt) {
       avgHtml = '<div class="avg-rating">★ ' + avg.toFixed(1) + ' <span style="font-size:13px;opacity:0.6">(' + reviews.length + ' ressenya' + (reviews.length!==1?'es':'') + ')</span></div>';
     }
 
-    var tagsHtml = '';
-    if (evt.tags && evt.tags.length) {
-      tagsHtml = evt.tags.map(function(t){return '<span class="tag tag-cat">' + escHtml(t) + '</span>';}).join('');
-    }
+    var tagsHtml = (evt.tags||[]).map(function(t){return '<span class="tag tag-cat">'+escHtml(t)+'</span>';}).join('');
 
     var infoBlocks = '';
-
-    if (evt.time) {
-      infoBlocks += '<div class="info-block"><span class="info-icon">🕐</span><div><strong>Horari</strong><br>' + escHtml(evt.time) + '</div></div>';
-    }
-    if (evt.startDate) {
-      infoBlocks += '<div class="info-block"><span class="info-icon">📅</span><div><strong>Data</strong><br>' + formatFullDate(evt.startDate) + (evt.estimatedDates ? '<br><small>' + escHtml(evt.estimatedDates) + '</small>' : '') + '</div></div>';
-    }
+    if (evt.time) infoBlocks += '<div class="info-block"><span class="info-icon">🕐</span><div><strong>Horari</strong><br>'+escHtml(evt.time)+'</div></div>';
+    if (evt.startDate) infoBlocks += '<div class="info-block"><span class="info-icon">📅</span><div><strong>Data</strong><br>'+formatFullDate(evt.startDate)+(evt.estimatedDates?'<br><small>'+escHtml(evt.estimatedDates)+'</small>':'')+'</div></div>';
     if (evt.location) {
-      var mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(evt.location + ', Barcelona');
-      infoBlocks += '<div class="info-block"><span class="info-icon">📍</span><div><strong>Adreça</strong><br>' + escHtml(evt.location) + (evt.neighborhood ? '<br><small>' + escHtml(evt.neighborhood) + (evt.district ? ' · ' + escHtml(evt.district) : '') + '</small>' : '') + '<br><a href="' + mapsUrl + '" target="_blank" style="font-size:12px;color:var(--accent)">Veure al mapa ↗</a></div></div>';
+      var mapsSearch = 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(evt.location+', Barcelona');
+      infoBlocks += '<div class="info-block"><span class="info-icon">📍</span><div><strong>Adreça</strong><br>'+escHtml(evt.location)+(evt.neighborhood?'<br><small>'+escHtml(evt.neighborhood)+(evt.district?' · '+escHtml(evt.district):'')+'</small>':'')+'<br><a href="'+mapsSearch+'" target="_blank" style="font-size:12px;color:var(--accent)">Veure al mapa ↗</a></div></div>';
     }
-    if (evt.organizer) {
-      infoBlocks += '<div class="info-block"><span class="info-icon">🏛️</span><div><strong>Organitzador</strong><br>' + escHtml(evt.organizer) + '</div></div>';
-    }
+    if (evt.organizer) infoBlocks += '<div class="info-block"><span class="info-icon">🏛️</span><div><strong>Organitzador</strong><br>'+escHtml(evt.organizer)+'</div></div>';
 
-    var searchQuery = encodeURIComponent(evt.title + ' Barcelona');
-    var googleUrl = 'https://www.google.com/search?q=' + searchQuery;
-    var googleMapsNavUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + evt.lat + ',' + evt.lng;
+    var googleUrl = 'https://www.google.com/search?q='+encodeURIComponent(evt.title+' Barcelona');
+    var mapsNav = 'https://www.google.com/maps/dir/?api=1&destination='+evt.lat+','+evt.lng;
 
     content.innerHTML =
-      '<div class="event-title">' + escHtml(evt.title) + '</div>' +
-      avgHtml +
-      '<div class="event-meta">' +
-        (evt.free ? '<span class="tag tag-free">🆓 Gratuït</span>' : '<span class="tag tag-paid">💶 De pagament</span>') +
-        (evt.family ? '<span class="tag tag-free">👨‍👩‍👧 Família</span>' : '') +
-        tagsHtml +
-      '</div>' +
-      '<p class="event-desc">' + escHtml(evt.description) + '</p>' +
-      '<div class="info-blocks">' + infoBlocks + '</div>' +
-      '<div class="panel-actions">' +
-        '<button class="btn-primary" onclick="startARNav(\'' + evt.id + '\')">📷 AR</button>' +
-        '<button class="btn-secondary" onclick="window.open(\'' + googleMapsNavUrl + '\')">🗺️ Com arribar</button>' +
-      '</div>' +
-      '<div class="panel-actions" style="margin-top:8px">' +
-        '<button class="btn-secondary" onclick="window.open(\'' + evt.url + '\')">🔗 Més info (Guia BCN)</button>' +
-        '<button class="btn-secondary" onclick="window.open(\'' + googleUrl + '\')">🔍 Cercar a Google</button>' +
-      '</div>' +
-      '<div class="panel-actions" style="margin-top:8px">' +
-        '<button class="btn-secondary" onclick="openReviewModal()">✍️ Escriure ressenya</button>' +
-      '</div>' +
-      '<div class="reviews-section">' +
-        '<div class="reviews-title">💬 Ressenyes d\'avui (' + reviews.length + ')</div>' +
-        renderReviews(reviews) +
+      '<div class="event-title">'+escHtml(evt.title)+'</div>'+
+      avgHtml+
+      '<div class="event-meta">'+
+        (evt.free?'<span class="tag tag-free">🆓 Gratuït</span>':'<span class="tag tag-paid">💶 De pagament</span>')+
+        (evt.family?'<span class="tag tag-free">👨‍👩‍👧 Família</span>':'')+
+        tagsHtml+
+      '</div>'+
+      '<p class="event-desc">'+escHtml(evt.description)+'</p>'+
+      '<div class="info-blocks">'+infoBlocks+'</div>'+
+      '<div class="panel-actions">'+
+        '<button class="btn-primary" onclick="startARNav(\''+evt.id+'\')">📷 AR</button>'+
+        '<button class="btn-secondary" onclick="window.open(\''+mapsNav+'\')">🗺️ Com arribar</button>'+
+      '</div>'+
+      '<div class="panel-actions" style="margin-top:8px">'+
+        '<button class="btn-secondary" onclick="window.open(\''+evt.url+'\')">🔗 Guia BCN</button>'+
+        '<button class="btn-secondary" onclick="window.open(\''+googleUrl+'\')">🔍 Google</button>'+
+      '</div>'+
+      '<div class="panel-actions" style="margin-top:8px">'+
+        '<button class="btn-secondary" onclick="openReviewModal()">✍️ Escriure ressenya</button>'+
+      '</div>'+
+      '<div class="reviews-section">'+
+        '<div class="reviews-title">💬 Ressenyes d\'avui ('+reviews.length+')</div>'+
+        renderReviews(reviews)+
       '</div>';
   });
 }
@@ -285,14 +288,14 @@ function renderReviews(reviews) {
     for (var i=1;i<=5;i++) stars += i<=Number(r.estrellas)?'★':'☆';
     var time = '';
     try { time = new Date(r.fecha).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); } catch(e){}
-    return '<div class="review-item">' +
-      '<div class="review-header">' +
-        '<span class="review-user">@' + escHtml(r.usuario||'Anònim') + '</span>' +
-        '<span class="review-stars">' + stars + '</span>' +
-        '<span class="review-time">' + time + '</span>' +
-      '</div>' +
-      (r.comentario?'<div class="review-text">'+escHtml(r.comentario)+'</div>':'') +
-      (r.foto?'<img class="review-photo" src="'+r.foto+'" alt="foto" loading="lazy"/>':'') +
+    return '<div class="review-item">'+
+      '<div class="review-header">'+
+        '<span class="review-user">@'+escHtml(r.usuario||'Anònim')+'</span>'+
+        '<span class="review-stars">'+stars+'</span>'+
+        '<span class="review-time">'+time+'</span>'+
+      '</div>'+
+      (r.comentario?'<div class="review-text">'+escHtml(r.comentario)+'</div>':'')+
+      (r.foto?'<img class="review-photo" src="'+r.foto+'" alt="foto" loading="lazy"/>':'')+
       '</div>';
   }).join('');
 }
@@ -381,11 +384,11 @@ function initListToggle() {
 function renderList() {
   document.getElementById('list-items').innerHTML = filteredEvents.map(function(evt) {
     return '<div class="list-item" onclick="flyToEvent(\''+evt.id+'\')">' +
-      '<div class="list-item-title">'+(ICONS[evt.category]||'📍')+' '+escHtml(evt.title)+'</div>' +
-      '<div class="list-item-sub">' +
-        (evt.time?'<span>🕐 '+evt.time+'</span>':'') +
-        (evt.free?'<span class="dot-free">● Gratuït</span>':'') +
-        (evt.district?'<span>'+escHtml(evt.district)+'</span>':'') +
+      '<div class="list-item-title">'+(ICONS[evt.category]||'📍')+' '+escHtml(evt.title)+'</div>'+
+      '<div class="list-item-sub">'+
+        (evt.time?'<span>🕐 '+evt.time+'</span>':'')+
+        (evt.free?'<span class="dot-free">● Gratuït</span>':'')+
+        (evt.district?'<span>'+escHtml(evt.district)+'</span>':'')+
       '</div></div>';
   }).join('');
 }
@@ -406,7 +409,7 @@ function getLocation() {
     window.userLng = pos.coords.longitude;
     if (userMarker) map.removeLayer(userMarker);
     userMarker = L.circleMarker([window.userLat,window.userLng],{
-      radius:10,fillColor:'#2196f3',fillOpacity:0.9,color:'#fff',weight:3
+      radius:10, fillColor:'#2196f3', fillOpacity:0.9, color:'#fff', weight:3
     }).addTo(map).bindPopup('Ets aquí 📍');
     map.flyTo([window.userLat,window.userLng],14);
   },null,{enableHighAccuracy:true});
@@ -433,10 +436,10 @@ function getFallback() {
     {id:'e2',title:'Concert a la Plaça del Rei',category:'musica',lat:41.3841,lng:2.1769,free:true,family:false,time:'19:00–21:00',location:'Plaça del Rei',neighborhood:'Gòtic',district:'Ciutat Vella',description:'Cicle de música en viu al cor del barri gòtic.',organizer:'Ajuntament de Barcelona',tags:['Música','Gratuït'],url:'https://guia.barcelona.cat'},
     {id:'e3',title:'Exposició Museu Picasso',category:'exposicio',lat:41.3851,lng:2.1812,free:false,family:true,time:'10:00–19:00',location:'Carrer Montcada, 15',neighborhood:'El Born',district:'Ciutat Vella',description:'Una mirada als anys de formació artística del geni de Màlaga.',organizer:'Museu Picasso',tags:['Art','Exposició'],url:'https://museupicasso.bcn.cat'},
     {id:'e4',title:'Cinema Verdi — Sessió especial',category:'cinema',lat:41.3968,lng:2.1614,free:false,family:false,time:'16:00–22:00',location:'Carrer de Verdi, 32',neighborhood:'Vila de Gràcia',district:'Gràcia',description:'Sessió de cinema independent en versió original subtitulada.',organizer:'Cines Verdi',tags:['Cinema','VOSE'],url:'https://cines-verdi.com'},
-    {id:'e5',title:'Taller de Robòtica Infantil',category:'familia',lat:41.4000,lng:2.1900,free:true,family:true,time:'10:00–13:00',location:'Biblioteca Sagrada Família',neighborhood:'la Sagrada Família',district:'Eixample',description:'Tallers gratuïts per a nens de 8 a 12 anys. Cal inscripció prèvia.',organizer:'Biblioteques de Barcelona',tags:['Infantil','Tecnologia'],url:'https://biblioteques.barcelona'},
-    {id:'e6',title:'Mercat Vintage El Raval',category:'menjar',lat:41.3795,lng:2.1680,free:true,family:true,time:'10:00–18:00',location:'Plaça dels Àngels',neighborhood:'El Raval',district:'Ciutat Vella',description:'Mercat mensual de productes vintage, roba de segona mà i objectes curiosos.',organizer:'',tags:['Mercat','Vintage'],url:'#'},
-    {id:'e7',title:'Visita Guiada Modernisme',category:'cultura',lat:41.3917,lng:2.1649,free:false,family:false,time:'10:30 i 16:30',location:'Sortida: Plaça Catalunya',neighborhood:'Dreta de l\'Eixample',district:'Eixample',description:'Descobreix edificis modernistes fora dels circuits turístics habituals.',organizer:'Barcelona Turisme',tags:['Turisme','Arquitectura'],url:'https://barcelona.cat/turisme'},
-    {id:'e8',title:'Festa Major del Poblenou',category:'cultura',lat:41.4014,lng:2.1996,free:true,family:true,time:'Tot el dia',location:'Rambla del Poblenou',neighborhood:'el Poblenou',district:'Sant Martí',description:'Festa major amb activitats per a totes les edats, música en viu i menjar popular.',organizer:'Associació de Veïns del Poblenou',tags:['Festa','Barri'],url:'https://guia.barcelona.cat'}
+    {id:'e5',title:'Taller de Robòtica Infantil',category:'familia',lat:41.4000,lng:2.1900,free:true,family:true,time:'10:00–13:00',location:'Biblioteca Sagrada Família',neighborhood:'la Sagrada Família',district:'Eixample',description:'Tallers gratuïts per a nens de 8 a 12 anys.',organizer:'Biblioteques de Barcelona',tags:['Infantil','Tecnologia'],url:'https://biblioteques.barcelona'},
+    {id:'e6',title:'Mercat Vintage El Raval',category:'menjar',lat:41.3795,lng:2.1680,free:true,family:true,time:'10:00–18:00',location:'Plaça dels Àngels',neighborhood:'El Raval',district:'Ciutat Vella',description:'Mercat mensual de productes vintage.',organizer:'',tags:['Mercat','Vintage'],url:'#'},
+    {id:'e7',title:'Visita Guiada Modernisme',category:'cultura',lat:41.3917,lng:2.1649,free:false,family:false,time:'10:30 i 16:30',location:'Sortida: Plaça Catalunya',neighborhood:'Dreta de l\'Eixample',district:'Eixample',description:'Descobreix edificis modernistes fora dels circuits habituals.',organizer:'Barcelona Turisme',tags:['Turisme','Arquitectura'],url:'https://barcelona.cat/turisme'},
+    {id:'e8',title:'Festa Major del Poblenou',category:'festa',lat:41.4014,lng:2.1996,free:true,family:true,time:'Tot el dia',location:'Rambla del Poblenou',neighborhood:'el Poblenou',district:'Sant Martí',description:'Festa major amb activitats per a totes les edats.',organizer:'Associació de Veïns del Poblenou',tags:['Festa','Barri'],url:'https://guia.barcelona.cat'}
   ];
 }
 
