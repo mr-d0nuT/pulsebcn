@@ -40,14 +40,32 @@ window.addEventListener('load', function() {
 });
 
 function initMap() {
-  var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  var tileUrl = isDark
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-  map = L.map('map', {center: BCN_CENTER, zoom: 13, zoomControl: false});
-  L.tileLayer(tileUrl, {attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19}).addTo(map);
+  map = L.map('map', {center: BCN_CENTER, zoom: 13, zoomControl: false, maxZoom: 20});
+  addBaseLayer();
   L.control.zoom({position:'bottomleft'}).addTo(map);
   map.on('click', closePanel);
+}
+
+// OpenFreeMap: teselas vectoriales gratis, sin API key ni limites de uso. CARTO
+// dejo de servir sus basemaps de forma anonima y ahora estampa "API KEY
+// REQUIRED" sobre cada tesela.
+function addBaseLayer() {
+  var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var style = isDark
+    ? 'https://tiles.openfreemap.org/styles/dark'
+    : 'https://tiles.openfreemap.org/styles/positron';
+  var attrib = '© OpenStreetMap © OpenFreeMap';
+  var glReady = window.maplibregl && L.maplibreGL &&
+    (typeof maplibregl.supported !== 'function' || maplibregl.supported());
+  if (glReady) {
+    try {
+      L.maplibreGL({style: style, attribution: attrib}).addTo(map);
+      return;
+    } catch (e) { /* cae al raster */ }
+  }
+  // MapLibre necesita WebGL: sin el, raster de OSM antes que un mapa en blanco
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {attribution: attrib, maxZoom: 20, maxNativeZoom: 19}).addTo(map);
 }
 
 function initDatePicker() {
