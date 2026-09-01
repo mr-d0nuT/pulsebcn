@@ -35,15 +35,39 @@ els torns amb horari, els festius, la bolsa i la configuració. El client en
 deriva els mesos, els comptadors, les hores i la vista anual **sense tornar a
 parlar amb el servidor**. Canviar de mes passa a ser instantani per sempre.
 
-### 2. Arrencada en calent
+### 2. L'arrencada es fa en dues fases
+
+La primera versió d'aquest canvi retornava l'any sencer ja a la crida
+d'arrencada — una crida en lloc de dues. Era un error: feia que el **primer
+pintat depengués d'escombrar 365 dies de calendari**, i amb una agenda
+carregada l'aplicació es quedava en blanc, indefinidament, amb l'indicador
+en «Sincronitzant».
+
+Ara `arrancar(any, mes, calendari)` retorna els calendaris i **només el mes
+visible** — una consulta barata —, i el client demana l'any sencer tot seguit,
+en segon pla, amb el calendari ja a la pantalla. Mesurat al navegador: la
+graella apareix en ~0,5 s encara que l'any trigui quatre segons més.
+
+Dues proteccions més, perquè això no torni a passar en silenci:
+
+- **Vigilant a cada crida.** Si el servidor no contesta (40 s a l'arrencada,
+  120 s per a l'any), la graella deixa de ser un esquelet infinit i passa a
+  dir què passa, amb un botó per tornar-ho a provar. Un error del servidor fa
+  el mateix, en lloc d'un avís que s'esvaeix en quatre segons.
+- **La tipografia ja no bloqueja.** El `<link>` de Google Fonts a `<head>`
+  aturava l'execució de l'script fins que arribava; ara es carrega amb
+  `media="print"` i s'activa en arribar. L'arrencada tampoc espera el
+  logotip: `DOMContentLoaded` en lloc de `window.onload`.
+
+### 3. Arrencada en calent
 
 L'últim any consultat es desa a `localStorage`. En obrir l'aplicació es pinta
 immediatament amb aquestes dades i es revalida en segon pla (_stale while
 revalidate_); un punt taronja al capçal indica que el que veus encara és local.
-Abans hi havia dues crides encadenades — calendaris i després events — abans de
-veure res; ara `arrancar()` les fusiona en una.
+Abans no es veia res fins que tornaven dues crides encadenades: primer els
+calendaris i, només llavors, els events.
 
-### 3. Escriptures optimistes amb «Desfés»
+### 4. Escriptures optimistes amb «Desfés»
 
 Desar dies feia tres viatges seguits al servidor: desar → recarregar el mes →
 recarregar les estadístiques, i entremig la graella es buidava.
@@ -53,7 +77,7 @@ segon pla i la resposta ja porta el payload refrescat. Si falla, es recupera
 l'estat anterior. Cada operació mostra un avís amb **Desfés**, que restaura
 exactament els events que hi havia (`restaurarDies`).
 
-### 4. El servidor llegeix el calendari una sola vegada per operació
+### 5. El servidor llegeix el calendari una sola vegada per operació
 
 `procesarListaDias` feia una consulta `getEvents` **per cada dia seleccionat**.
 Marcar 20 dies eren 20 consultes. Ara es llegeix tot el rang de cop i s'agrupa
@@ -63,37 +87,37 @@ A més, el payload anual es guarda a `CacheService` amb una clau que inclou una
 versió de dades que s'incrementa a cada escriptura, de manera que la memòria cau
 s'invalida sola sense TTL curts.
 
-### 5. Seleccionar dies arrossegant el dit
+### 6. Seleccionar dies arrossegant el dit
 
 En mode selecció es poden pintar dies arrossegant per la graella, amb una
 resposta hàptica per dia. També hi ha una barra de selecció ràpida:
 **Tot el mes · Dl–Dv · Caps de setmana · Dies lliures · Cap**.
 
-### 6. Res de diàlegs del navegador
+### 7. Res de diàlegs del navegador
 
 `confirm()` i `alert()` (que en un iframe d'Apps Script apareixen desancorats de
 l'aplicació) i l'overlay central bloquejant «⏳ Processant…» se substitueixen per
 fulls inferiors i avisos que no bloquegen la interfície.
 
-### 7. Tema fosc
+### 8. Tema fosc
 
 Complet, amb tres estats (automàtic / clar / fosc) des del botó del capçal. Es
 resol abans del primer pintat perquè no hi hagi flaix blanc. La impressió surt
 sempre en clar.
 
-### 8. Esquelets en comptes d'estats d'espera
+### 9. Esquelets en comptes d'estats d'espera
 
 Mentre no hi ha dades es mostra un esquelet amb la mida definitiva, així que no
 hi ha cap salt de disposició quan arriben. Substitueix el `…` i el fos al 30 %.
 
-### 9. Transicions i detalls
+### 10. Transicions i detalls
 
 Canvi de mes amb lliscament direccional, comptadors que animen del valor antic
 al nou, rebot als dies que acaben de canviar, `prefers-reduced-motion` respectat,
 `:focus-visible` per a navegació amb teclat, i etiquetes `aria-label` a cada dia
 amb el seu contingut real.
 
-### 10. Prima per cap de setmana treballat sencer
+### 11. Prima per cap de setmana treballat sencer
 
 Nou comptador: **150 € per cada dissabte + diumenge treballats íntegrament**, que
 es cobren l'any següent.

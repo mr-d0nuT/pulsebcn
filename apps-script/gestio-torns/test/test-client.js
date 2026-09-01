@@ -18,7 +18,7 @@ const sandbox = {
                   removeItem(k){delete this._d[k];}, key(i){return Object.keys(this._d)[i];},
                   get length(){return Object.keys(this._d).length;} },
   google: { script: { run: new Proxy({}, { get:()=>()=>sandbox.google.script.run }) } },
-  document: { getElementById: elem, querySelector: ()=>null, querySelectorAll: ()=>[],
+  document: { readyState:'loading', getElementById: elem, querySelector: ()=>null, querySelectorAll: ()=>[],
               createElement: elem, createDocumentFragment: elem, addEventListener: noop,
               documentElement:{ setAttribute:noop } },
 };

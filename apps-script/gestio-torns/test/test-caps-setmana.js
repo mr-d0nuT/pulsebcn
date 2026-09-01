@@ -7,7 +7,7 @@ const box={console,Date,Math,JSON,Set,Array,Object,String,Number,parseInt,parseF
   setTimeout,setInterval,clearTimeout,performance,requestAnimationFrame:noop,navigator:{},
   localStorage:{_d:{},getItem(k){return this._d[k]??null;},setItem(k,v){this._d[k]=String(v);},removeItem(k){delete this._d[k];},key(i){return Object.keys(this._d)[i];},get length(){return Object.keys(this._d).length;}},
   google:{script:{run:new Proxy({},{get:()=>()=>box.google.script.run})}},
-  document:{getElementById:elem,querySelector:()=>null,querySelectorAll:()=>[],createElement:elem,
+  document:{readyState:'loading',getElementById:elem,querySelector:()=>null,querySelectorAll:()=>[],createElement:elem,
             createDocumentFragment:elem,addEventListener:noop,documentElement:{setAttribute:noop}}};
 box.window=box; box.matchMedia=()=>({matches:false,addEventListener:noop}); box.window.matchMedia=box.matchMedia;
 const html=fs.readFileSync(require('path').join(__dirname,'..','Index.html'),'utf8');

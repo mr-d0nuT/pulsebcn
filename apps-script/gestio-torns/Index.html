@@ -13,7 +13,8 @@
   }catch(e){ document.documentElement.setAttribute('data-theme','light'); }
 })();
 </script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"></noscript>
 <style>
 /* ========== DESIGN SYSTEM ========== */
 :root {
@@ -942,6 +943,28 @@ body{
 @media (max-width:560px){ .doc-foot{ grid-template-columns:repeat(3,1fr); } }
 @media print{ .doc-foot{ grid-template-columns:repeat(6,1fr)!important; } }
 
+/* ==========================================================================
+   v2 — AVÍS DE FALLADA DINS DE LA GRAELLA
+   Si el servidor no contesta, la graella deixa de ser un esquelet infinit i
+   passa a dir què passa i com tornar-ho a provar.
+   ========================================================================== */
+.fallada{
+  grid-column:1/-1; display:flex; flex-direction:column; align-items:center;
+  gap:14px; padding:30px 20px; text-align:center;
+}
+.fallada p{
+  font-size:13.5px; font-weight:600; color:var(--txt2);
+  line-height:1.55; max-width:34ch; margin:0;
+}
+.btn-reintent{
+  background:linear-gradient(135deg,var(--blue),#0D47A1); color:#fff;
+  border:none; border-radius:12px; padding:11px 22px;
+  font-size:13.5px; font-weight:800; cursor:pointer; font-family:inherit;
+  box-shadow:0 3px 12px rgba(21,101,192,.35);
+  -webkit-tap-highlight-color:transparent; transition:transform .12s var(--spring);
+}
+.btn-reintent:active{ transform:scale(.95); }
+
 </style>
 </head>
 <body>
@@ -1499,6 +1522,7 @@ var mesV  = now.getMonth(), anioV = now.getFullYear();
 
 var ANYS  = {};      // anio → payload del servidor (dades pures)
 var DERIV = {};      // anio → dades derivades en local (índex, comptadors, hores)
+var PARCIAL = null;  // {anio, mes, byDay} — només el mes visible, mentre arriba l'any
 
 var calId = null, cals = [], urlApp = '';
 var modo  = null, sel = new Set();
@@ -1789,9 +1813,7 @@ function derivar(anio) {
   ds.setDate(ds.getDate() + ((6 - ds.getDay() + 7) % 7));           // primer dissabte de l'any
   while (ds.getFullYear() === anio) {
     var dg = new Date(ds.getTime()); dg.setDate(dg.getDate() + 1);  // el diumenge següent
-    // Els parells que creuen el canvi d'any (dissabte 31/12 + diumenge 1/1) no
-    // es compten: el diumenge és a les dades de l'any següent, i barrejar-les
-    // faria que l'import canviés segons si aquell any ja s'ha carregat o no.
+    // Un cap de setmana a cavall de dos anys es comptabilitza a l'any del diumenge
     if (dg.getFullYear() === anio) {
       var ks = ds.getMonth() + '_' + ds.getDate();
       var kg = dg.getMonth() + '_' + dg.getDate();
@@ -1819,12 +1841,33 @@ function derivar(anio) {
 
 function evsDelDia(anio, mes, dia) {
   var d = DERIV[anio];
-  return (d && d.byDay[mes + '_' + dia]) || [];
+  if (d) return d.byDay[mes + '_' + dia] || [];
+  if (PARCIAL && PARCIAL.anio === anio && PARCIAL.mes === mes) return PARCIAL.byDay[mes + '_' + dia] || [];
+  return [];
+}
+
+/* Pinta el mes visible amb la resposta barata de l'arrencada, mentre l'any
+   sencer encara viatja. Les estadístiques es queden en esquelet fins llavors. */
+function adoptarMes(m) {
+  if (!m) return;
+  var byDay = {};
+  (m.eventos || []).forEach(function(e) {
+    var k = e.m + '_' + e.d;
+    (byDay[k] = byDay[k] || []).push({ dia:e.d, titulo:e.n, tipo:e.t, horario:e.h });
+  });
+  (m.festivos || []).forEach(function(f) {
+    if (f.mes !== m.mes) return;
+    var k = f.mes + '_' + f.dia;
+    (byDay[k] = byDay[k] || []).push({ dia:f.dia, titulo:f.titulo, tipo:'FESTIVO', horario:'Festiu' });
+  });
+  PARCIAL = { anio: m.anio, mes: m.mes, byDay: byDay };
+  renderTot();
 }
 
 /* Substitueix les dades d'un any per les que acaba d'enviar el servidor */
 function adoptar(anio, p) {
   if (!p) return;
+  PARCIAL = null;          // ja tenim l'any sencer
   ANYS[anio] = p;
   aplicarConfigServidor(p.cfg);
   derivar(anio);
@@ -1832,8 +1875,40 @@ function adoptar(anio, p) {
   if (anio === anioV) { renderTot(); if (diaObert) showInfo(diaObert); }
 }
 
+/* ===================== VIGILANT DE LES CRIDES ===================== */
+/* Cap crida es pot quedar girant en silenci: si el servidor no contesta a
+   temps, cal dir-ho i oferir tornar-ho a provar. */
+function vigilar(segons, quan) {
+  var t = setTimeout(quan, segons * 1000);
+  return function(){ clearTimeout(t); };
+}
+
+function mostrarFallada(text, reintentar) {
+  var grid = $('calGrid');
+  grid.innerHTML = '';
+  var box = document.createElement('div');
+  box.className = 'fallada';
+  var p = document.createElement('p');
+  p.textContent = text;
+  box.appendChild(p);
+  if (reintentar) {
+    var b = document.createElement('button');
+    b.className = 'btn-reintent';
+    b.textContent = '↻ Tornar-ho a provar';
+    b.onclick = function(){ pintarEsquelet(); reintentar(); };
+    box.appendChild(b);
+  }
+  grid.appendChild(box);
+}
+
 /* ===================== ARRENCADA ===================== */
-window.onload = function() {
+/* window.onload espera TOTS els recursos, inclosos el logotip i la tipografia
+   de Google Fonts. Amb la xarxa lenta això endarreria l'arrencada sencera
+   darrere d'una imatge decorativa; amb DOMContentLoaded no. */
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
+else iniciar();
+
+function iniciar() {
   aplicarTema(temaGuardat());
   cargarLocal();
 
@@ -1907,19 +1982,25 @@ window.onload = function() {
   setInterval(function() {
     if (ANYS[anioV]) { derivar(anioV); renderStats(); }
   }, 60000);
-};
+}
 
+/* Fase 1: calendaris + el mes visible. Ha de ser ràpida: és el que decideix
+   quan apareix el calendari a la pantalla. */
 function arrancarApp() {
   sync(1);
+  var atura = vigilar(40, function() {
+    sync(-1); marcarStale(true);
+    mostrarFallada('El servidor no ha contestat. Comprova la connexió i torna-ho a provar.', arrancarApp);
+  });
   google.script.run
     .withSuccessHandler(function(r) {
-      sync(-1);
+      atura(); sync(-1);
       urlApp = r.cals.url;
       cals   = r.cals.calendarios || [];
       calId  = r.calId;
       if (!cals.length) {
         $('current-email').textContent = 'Sense calendaris';
-        toast("No s'ha trobat cap calendari", 'err', 4000);
+        mostrarFallada("No s'ha trobat cap calendari al teu compte de Google.", arrancarApp);
         return;
       }
       var cur = cals.filter(function(c){ return c.id === calId; })[0] || cals[0];
@@ -1930,13 +2011,37 @@ function arrancarApp() {
       } catch(e) {}
       pintarLlistaCalendaris();
       $('switchLink').href = 'https://accounts.google.com/SignOutOptions?continue=' + encodeURIComponent(urlApp);
-      adoptar(anioV, r.any);
-      marcarStale(false);
-      prefetchAny(anioV + 1);
-      prefetchAny(anioV - 1);
+      if (!ANYS[anioV]) adoptarMes(r.mes);   // el calendari ja es pot fer servir
+      marcarStale(true);
+      carregarAnyFons(anioV);                // fase 2, amb la pantalla ja plena
     })
-    .withFailureHandler(function(e) { sync(-1); marcarStale(true); err(e); })
-    .arrancar(anioV, calId);
+    .withFailureHandler(function(e) {
+      atura(); sync(-1); marcarStale(true);
+      mostrarFallada('El servidor ha donat un error: ' + (e && e.message ? e.message : e), arrancarApp);
+    })
+    .arrancar(anioV, mesV, calId);
+}
+
+/* Fase 2: l'any sencer. Va en segon pla; si triga, el calendari ja funciona. */
+function carregarAnyFons(anio) {
+  sync(1);
+  var atura = vigilar(120, function() {
+    sync(-1); marcarStale(true);
+    toast('Les dades anuals estan trigant. El calendari funciona; les estadístiques arribaran quan el servidor acabi.', 'warn', 7000);
+  });
+  google.script.run
+    .withSuccessHandler(function(p) {
+      atura(); sync(-1);
+      adoptar(anio, p);
+      marcarStale(false);
+      prefetchAny(anio + 1);
+      prefetchAny(anio - 1);
+    })
+    .withFailureHandler(function(e) {
+      atura(); sync(-1); marcarStale(true);
+      err(e);
+    })
+    .obtenerAnyComplet(anio, calId);
 }
 
 /* Els anys veïns es porten en silenci: canviar d'any també serà instantani */
@@ -1963,11 +2068,7 @@ function carregarAny(anio) {
   if (calent) { ANYS[anio] = calent; derivar(anio); renderTot(); marcarStale(true); }
   else { pintarEsquelet(); }
 
-  sync(1);
-  google.script.run
-    .withSuccessHandler(function(p) { sync(-1); adoptar(anio, p); marcarStale(false); })
-    .withFailureHandler(function(e) { sync(-1); marcarStale(true); err(e); })
-    .obtenerAnyComplet(anio, calId);
+  carregarAnyFons(anio);
 }
 
 /* ===================== CALENDARIS ===================== */
@@ -2018,7 +2119,7 @@ function setMes(a, m, dir) {
   anioV = a; mesV = m;
   actualizarBtnAvui();
   if (canviAny) { carregarAny(a); animarGrid(dir); }
-  else          { buildGrid(); animarGrid(dir); }
+  else          { pintarGraella(); animarGrid(dir); }
   $('mesAnioLabel').textContent = MESOS[mesV] + ' ' + anioV;
   netejarInfo();
 }
@@ -2051,9 +2152,17 @@ function pintarEsquelet() {
   });
 }
 
+// Pinta la graella si hi ha dades per al mes visible; si no, l'esquelet
+function pintarGraella() {
+  if (ANYS[anioV] || (PARCIAL && PARCIAL.anio === anioV && PARCIAL.mes === mesV)) buildGrid();
+  else pintarEsquelet();
+}
+
 function renderTot() {
   $('mesAnioLabel').textContent = MESOS[mesV] + ' ' + anioV;
-  buildGrid();
+  pintarGraella();
+  // Les xifres anuals només es poden pintar amb el payload de l'any sencer
+  if (!ANYS[anioV]) return;
   renderStats();
   renderExtras();
   renderCaps();
@@ -2133,9 +2242,6 @@ function buildGrid() {
 
   grid.innerHTML = '';
   grid.appendChild(frag);
-  ['hours-plan','hours-real','pct-done','ssPlan','ssReal'].forEach(function(id) {
-    var el = $(id); if (el) el.classList.remove('sk');
-  });
 }
 
 function addCellIcon(cell, icon, titulo) {

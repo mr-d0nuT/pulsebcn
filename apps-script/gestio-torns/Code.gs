@@ -307,11 +307,11 @@ function obtenerAnyComplet(anio, calendarId) {
   return payload;
 }
 
-function construirAnyComplet(anio, calendarId) {
-  var calendario = getCal(calendarId);
-  if (!calendario) throw new Error("No s'ha trobat el calendari");
-
-  var eventos = calendario.getEvents(new Date(anio, 0, 1), new Date(anio + 1, 0, 1));
+// Converteix una llista d'events del calendari al format que fa servir el
+// client. La zona horària es demana UNA vegada: dins del bucle serien
+// centenars de crides al servei per a un any sencer.
+function recollirEvents(eventos) {
+  var TZ    = tz();
   var evs   = [];   // {m, d, t, n, h}  — mes, dia, tipus, nom, horari llegible
   var torns = [];   // {f, a, b}        — data ISO, hora inici i fi en decimal
 
@@ -320,27 +320,48 @@ function construirAnyComplet(anio, calendarId) {
     var titulo = e.getTitle();
     var st     = e.getStartTime();
     var desc   = e.getDescription();
-    var tipo   = detectarTipo(titulo);
 
-    var horario = e.isAllDayEvent() ? 'Tot el dia' : 'Evento';
-    if (desc && desc.indexOf('Horario:') === 0) horario = desc.replace('Horario: ', '');
+    var teHorari = !!(desc && desc.indexOf('Horario:') !== -1);
+    // isAllDayEvent() només cal quan la descripció no porta ja l'horari
+    var horario = (teHorari && desc.indexOf('Horario:') === 0)
+        ? desc.replace('Horario: ', '')
+        : (e.isAllDayEvent() ? 'Tot el dia' : 'Evento');
 
-    evs.push({ m: st.getMonth(), d: st.getDate(), t: tipo, n: titulo, h: horario });
+    evs.push({ m: st.getMonth(), d: st.getDate(), t: detectarTipo(titulo), n: titulo, h: horario });
 
     // Les hores del dia surten de la descripció "Horario: HH:MM a HH:MM".
     // Enviem els extrems i deixem que el client calculi planificat/realitzat:
     // així el payload no caduca a mesura que avança el dia.
-    if (desc && desc.indexOf('Horario:') !== -1) {
+    if (teHorari) {
       var m = desc.match(/(\d{1,2}):(\d{2}) a (\d{1,2}):(\d{2})/);
       if (m) {
         torns.push({
-          f: isoDe(st),
+          f: Utilities.formatDate(st, TZ, 'yyyy-MM-dd'),
           a: parseInt(m[1], 10) + parseInt(m[2], 10) / 60,
           b: parseInt(m[3], 10) + parseInt(m[4], 10) / 60
         });
       }
     }
   }
+  return { evs: evs, torns: torns };
+}
+
+// Només el mes visible. És la consulta barata que permet pintar el calendari
+// de seguida, sense esperar l'escombrada de l'any sencer.
+function construirMes(anio, mes, calendarId) {
+  var calendario = getCal(calendarId);
+  if (!calendario) throw new Error("No s'ha trobat el calendari");
+  var r = recollirEvents(calendario.getEvents(new Date(anio, mes, 1), new Date(anio, mes + 1, 1)));
+  return { anio: anio, mes: mes, eventos: r.evs, festivos: getFestivosAnio(anio) };
+}
+
+function construirAnyComplet(anio, calendarId) {
+  var calendario = getCal(calendarId);
+  if (!calendario) throw new Error("No s'ha trobat el calendari");
+
+  var r     = recollirEvents(calendario.getEvents(new Date(anio, 0, 1), new Date(anio + 1, 0, 1)));
+  var evs   = r.evs;
+  var torns = r.torns;
 
   return {
     anio:     anio,
@@ -354,9 +375,14 @@ function construirAnyComplet(anio, calendarId) {
   };
 }
 
-// Arrencada: calendaris + payload de l'any en una sola crida.
-// Estalvia el segon viatge d'anada i tornada en obrir l'aplicació.
-function arrancar(anio, calendarId) {
+// Arrencada: calendaris + NOMÉS el mes visible.
+//
+// Retornar aquí l'any sencer semblava una bona idea (una crida en lloc de
+// dues), però feia que el primer pintat depengués d'escombrar 365 dies de
+// calendari: amb una agenda carregada, l'aplicació es quedava en blanc.
+// Ara la primera resposta és barata i el client demana l'any tot seguit,
+// en segon pla, amb el calendari ja a la pantalla.
+function arrancar(anio, mes, calendarId) {
   var cals = obtenerMisCalendarios();
   var id   = calendarId || null;
   // Si el calendari recordat ja no existeix, caiem al primer de la llista
@@ -366,7 +392,7 @@ function arrancar(anio, calendarId) {
   }
   if (!existe) id = cals.calendarios.length ? cals.calendarios[0].id : null;
 
-  return { cals: cals, calId: id, any: obtenerAnyComplet(anio, id) };
+  return { cals: cals, calId: id, mes: construirMes(anio, mes, id) };
 }
 
 // ============ PROCESSAR DIES ============
