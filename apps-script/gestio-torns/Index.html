@@ -1,0 +1,3362 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<script>
+/* El tema es resol abans del primer pintat perquè no hi hagi cap flaix blanc */
+(function(){
+  try{
+    var t = localStorage.getItem('GT_TEMA') || 'auto';
+    if (t === 'auto') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){ document.documentElement.setAttribute('data-theme','light'); }
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"></noscript>
+<style>
+/* ========== DESIGN SYSTEM ========== */
+:root {
+  /* Torns */
+  --red:#DA291C; --red-d:#B71C1C;
+  --mati:#0288D1; --mati-d:#01579B; --mati-bg:#E1F5FE;
+  --comp:#3949AB; --comp-d:#1A237E; --comp-bg:#E8EAF6;
+  --esp:#7B1FA2;  --esp-d:#4A148C;  --esp-bg:#F3E5F5;
+  /* Overlaps (LLIC / BAIXA) */
+  --llic:#F48FB1;  --llic-d:#C2185B;  --llic-bg:#FCE4EC;
+  --bxa:#E91E63;   --bxa-d:#880E4F;   --bxa-bg:#FCE4EC;
+  /* Dies sense hores */
+  --vac:#00897B;   --vac-d:#004D40;   --vac-bg:#E0F2F1;
+  --fs:#607D8B;    --fs-d:#263238;    --fs-bg:#ECEFF1;
+  --fo:#F4511E;    --fo-d:#BF360C;    --fo-bg:#FBE9E7;
+  --fod:#F9A825;   --fod-d:#E65100;   --fod-bg:#FFF9C4;
+  /* Bolsa: VE / APCH (sense hores, full cell) */
+  --ve:#388E3C;    --ve-d:#1B5E20;    --ve-bg:#E8F5E9;
+  --apch:#9CCC65;  --apch-d:#558B2F;  --apch-bg:#F1F8E9;
+  /* Bolsa: VA / EBEP (overlay sobre torn, compta com treballat) */
+  --va:#6D4C41;    --va-d:#3E2723;    --va-bg:#EFEBE9;
+  --ebep:#00838F;  --ebep-d:#006064;  --ebep-bg:#E0F7FA;
+  /* Festiu auto */
+  --fest:#C62828;  --fest-bg:#FFEBEE;
+  /* UI */
+  --blue:#1565C0; --blue-l:#42A5F5;
+  --green:#2E7D32; --green-l:#43A047;
+  --sur:#FFFFFF; --bg:#F0F2F5;
+  --bdr:#E0E0E0; --txt:#1A1A1A; --txt2:#757575;
+  --sh:0 2px 12px rgba(0,0,0,.08);
+  --sh-m:0 4px 24px rgba(0,0,0,.13);
+  --sh-l:0 8px 40px rgba(0,0,0,.18);
+  --r:14px; --r-s:9px;
+  --ease:cubic-bezier(.4,0,.2,1);
+  --spring:cubic-bezier(.34,1.56,.64,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  font-family:'Inter',-apple-system,sans-serif;
+  background:linear-gradient(160deg,#E8EDF5 0%,#F0F2F5 45%,#EAF0EE 100%);
+  background-attachment:fixed;
+  color:var(--txt);
+  min-height:100vh; padding-bottom:140px;
+  overflow-x:hidden; -webkit-font-smoothing:antialiased;
+}
+
+/* ===== HEADER ===== */
+.app-header{
+  background:linear-gradient(135deg,var(--red) 0%,var(--red-d) 100%);
+  padding:10px 16px; display:flex; align-items:center;
+  justify-content:space-between; box-shadow:0 3px 12px rgba(218,41,28,.45);
+  position:sticky; top:0; z-index:60;
+}
+.hdr-left{display:flex;align-items:center;gap:11px;}
+.app-logo{height:36px;width:auto;background:rgba(255,255,255,.92);border-radius:7px;padding:3px 6px;display:block;}
+.app-title{color:#fff;font-weight:900;font-size:17px;line-height:1;letter-spacing:-.3px;}
+.app-sub{color:rgba(255,255,255,.72);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-top:2px;}
+.hdr-right{display:flex;gap:7px;align-items:center;}
+.btn-hdr{
+  background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);
+  color:#fff;border-radius:9px;padding:7px 11px;cursor:pointer;
+  font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px;
+  -webkit-tap-highlight-color:transparent;transition:background .15s;
+}
+.btn-hdr:active{background:rgba(255,255,255,.3);}
+.btn-hdr svg{fill:white;}
+
+/* ===== DASHBOARD ===== */
+.dashboard{
+  background:var(--sur);margin:10px 12px;
+  border-radius:var(--r);box-shadow:var(--sh);
+  padding:14px 14px 12px;display:grid;
+  grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;
+}
+.dash-l{display:flex;flex-direction:column;gap:6px;}
+.dash-r{display:flex;flex-direction:column;gap:6px;align-items:flex-end;}
+.dash-stat{display:flex;flex-direction:column;}
+.ds-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--txt2);}
+.ds-val{font-size:18px;font-weight:900;line-height:1.1;}
+.ds-val.blue{color:var(--blue);}
+.ds-val.green{color:var(--green-l);}
+.ds-val.diff-pos{color:var(--green);}
+.ds-val.diff-neg{color:var(--red);}
+.obj-input{
+  width:62px;font-size:16px;font-weight:800;color:#555;
+  border:1.5px solid var(--bdr);border-radius:8px;
+  padding:4px 6px;text-align:center;background:#FAFAFA;
+  transition:border-color .2s;font-family:inherit;
+}
+.obj-input:focus{outline:none;border-color:var(--blue);background:#fff;}
+/* Ring */
+.dash-c{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.ring-wrap{position:relative;width:72px;height:72px;}
+.ring-svg{width:72px;height:72px;transform:rotate(-90deg);}
+.rb{fill:none;stroke:#F0F0F0;stroke-width:6;}
+.rp{fill:none;stroke:var(--blue);stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset 1.1s var(--ease);}
+.rr{fill:none;stroke:var(--green-l);stroke-width:3.5;stroke-linecap:round;transition:stroke-dashoffset 1.1s var(--ease);}
+.ring-txt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;}
+.ring-pct{font-size:13px;font-weight:900;color:var(--txt);line-height:1;}
+.ring-lbl{font-size:8px;color:var(--txt2);font-weight:700;margin-top:1px;}
+.acc-btn{
+  background:linear-gradient(135deg,#E3F2FD,#BBDEFB);
+  border:none;border-radius:10px;padding:7px 12px;
+  cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;gap:2px;width:100%;min-width:90px;
+  -webkit-tap-highlight-color:transparent;
+}
+.acc-btn:active{opacity:.8;}
+.acc-name{font-size:10px;font-weight:800;color:#1565C0;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.acc-hint{font-size:9px;color:#90CAF9;font-weight:600;}
+
+/* ===== PROGRESS BARS ===== */
+.prog-wrap{
+  background:var(--sur);margin:0 12px 4px;
+  border-radius:var(--r-s);padding:8px 14px;
+  box-shadow:var(--sh);display:flex;flex-direction:column;gap:5px;
+}
+.prog-row{display:flex;justify-content:space-between;align-items:center;}
+.prog-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);}
+.prog-pct{font-size:11px;font-weight:800;}
+.prog-track{height:6px;background:#F0F0F0;border-radius:3px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--blue),var(--blue-l));transition:width 1.2s var(--ease);}
+.prog-fill-r{background:linear-gradient(90deg,var(--green),var(--green-l));}
+
+/* ===== EXTRAS BAR (FO/DES · FC · LLIC · etc.) ===== */
+.extras-bar{
+  display:flex;gap:8px;padding:0 12px 4px;
+  overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+.extras-bar::-webkit-scrollbar{display:none;}
+.xchip{
+  display:flex;align-items:center;gap:6px;white-space:nowrap;
+  background:var(--sur);border-radius:20px;padding:5px 12px;
+  box-shadow:var(--sh);font-size:11px;font-weight:700;
+  border-left:3px solid transparent;flex-shrink:0;
+}
+.xchip.fodes-chip{border-color:var(--fod);}
+.xchip.fc-chip{border-color:var(--vac);}
+.xchip.llic-chip{border-color:var(--llic);}
+.xchip.baixa-chip{border-color:var(--bxa);}
+.xchip-icon{font-size:14px;}
+.xchip-val{color:var(--txt);}
+.xchip-money{font-size:13px;font-weight:900;color:var(--fod-d);}
+
+/* ===== LEGEND BAR ===== */
+.legend-bar{
+  display:flex;gap:7px;padding:0 12px 8px;
+  overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+.legend-bar::-webkit-scrollbar{display:none;}
+.leg{
+  display:flex;align-items:center;gap:5px;white-space:nowrap;
+  background:var(--sur);border-radius:20px;padding:5px 11px;
+  box-shadow:var(--sh);font-size:10px;font-weight:700;color:var(--txt2);
+  cursor:pointer;border:1.5px solid transparent;flex-shrink:0;
+  -webkit-tap-highlight-color:transparent;transition:transform .15s;
+}
+.leg:active{transform:scale(.92);}
+.leg.leg-active{border-color:currentColor;box-shadow:var(--sh-m);}
+.leg-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+.leg.lc-mati{color:var(--mati);}  .leg.lc-comp{color:var(--comp);}
+.leg.lc-esp{color:var(--esp);}    .leg.lc-llic{color:var(--llic-d);}
+.leg.lc-bxa{color:var(--bxa-d);} .leg.lc-ve{color:var(--ve-d);}
+.leg.lc-apch{color:var(--apch-d);}.leg.lc-va{color:var(--va-d);}
+.leg.lc-ebep{color:var(--ebep-d);}.leg.lc-fc{color:var(--vac);}
+.leg.lc-fs{color:var(--fs);}      .leg.lc-fo{color:var(--fo);}
+.leg.lc-fod{color:var(--fod-d);} .leg.lc-bor{color:var(--fest);}
+.leg.lc-fes{color:var(--fest);cursor:default;}
+
+/* ===== RESUM COMPACTE ===== */
+.stats-strip{
+  display:flex;align-items:center;gap:10px;
+  background:var(--sur);margin:10px 12px 8px;padding:9px 12px;
+  border-radius:var(--r);box-shadow:var(--sh);cursor:pointer;
+  -webkit-tap-highlight-color:transparent;user-select:none;transition:transform .12s;
+}
+.stats-strip:active{transform:scale(.985);}
+.ss-ring{
+  width:42px;height:42px;border-radius:50%;flex-shrink:0;position:relative;
+  background:conic-gradient(var(--green-l) 0%,#F0F0F0 0);
+  display:flex;align-items:center;justify-content:center;
+}
+.ss-ring::before{content:'';position:absolute;inset:4px;background:var(--sur);border-radius:50%;}
+.ss-ring span{position:relative;font-size:11px;font-weight:900;color:var(--txt);}
+.ss-txt{flex:1;min-width:0;}
+.ss-main{font-size:12px;font-weight:600;color:var(--txt2);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ss-main b{font-weight:900;font-size:13px;}
+.ss-blue{color:var(--blue);} .ss-green{color:var(--green);}
+.ss-track{height:5px;background:#F0F0F0;border-radius:3px;overflow:hidden;position:relative;}
+.ss-fill{position:absolute;top:0;left:0;height:100%;border-radius:3px;width:0;
+  background:linear-gradient(90deg,var(--blue),var(--blue-l));transition:width 1.1s var(--ease);}
+.ss-fill-r{background:linear-gradient(90deg,var(--green),var(--green-l));}
+.ss-cal{
+  width:36px;height:36px;border:none;border-radius:10px;flex-shrink:0;cursor:pointer;
+  background:linear-gradient(135deg,#E3F2FD,#BBDEFB);font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;transition:transform .12s;
+}
+.ss-cal:active{transform:scale(.9);}
+.ss-chev{font-size:13px;color:var(--txt2);flex-shrink:0;width:16px;text-align:center;transition:transform .35s var(--ease);}
+.stats-strip.open .ss-chev{transform:rotate(180deg);}
+/* Panell plegable */
+.stats-panel{max-height:0;overflow:hidden;opacity:0;transition:max-height .5s var(--ease),opacity .35s ease;}
+.stats-panel.open{max-height:1400px;opacity:1;}
+
+/* ===== CALENDAR ===== */
+.cal-card{
+  background:var(--sur);margin:0 12px 8px;
+  border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;
+}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:13px 14px 8px;}
+.month-label{font-size:19px;font-weight:900;color:var(--txt);letter-spacing:-.3px;}
+.nav-arr{
+  width:38px;height:38px;border:none;background:var(--bg);
+  border-radius:50%;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;font-size:20px;color:var(--txt2);
+  -webkit-tap-highlight-color:transparent;transition:background .15s;
+}
+.nav-arr:active{background:var(--bdr);}
+.btn-avui{background:#E3F2FD;color:var(--blue);border:none;border-radius:14px;padding:4px 11px;font-size:10px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;display:none;animation:popIn .25s var(--spring);-webkit-tap-highlight-color:transparent;}
+.btn-avui:active{background:#BBDEFB;}
+.day-heads{display:grid;grid-template-columns:repeat(7,1fr);padding:0 8px;margin-bottom:3px;}
+.dh{text-align:center;font-size:10px;font-weight:700;color:var(--txt2);text-transform:uppercase;padding:4px 0;}
+.dh.we{color:#EF5350;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);padding:0 8px 12px;gap:4px;transition:opacity .2s;}
+.cal-grid.fading{opacity:.3;}
+
+/* ===== DAY CELLS ===== */
+.day-cell{
+  aspect-ratio:1;border-radius:10px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  font-size:13px;font-weight:500;position:relative;
+  cursor:pointer;border:1.5px solid transparent;
+  overflow:hidden;min-height:40px;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .12s;user-select:none;
+}
+.day-cell:active{transform:scale(.84);}
+.day-cell.empty{background:transparent;border:none;cursor:default;pointer-events:none;}
+.day-cell.weekend-day{color:#C62828;font-weight:600;}
+.day-cell.today{border-color:var(--red)!important;font-weight:900;}
+.day-cell.today::after{
+  content:'';position:absolute;bottom:3px;left:50%;
+  transform:translateX(-50%);width:4px;height:4px;
+  border-radius:50%;background:var(--red);
+}
+/* Marc parpadejant multicolor del dia d'avui (només pantalla; s'amaga en imprimir) */
+.day-cell.today,
+.md.md-today{
+  outline:3px solid #FF1744;outline-offset:-1px;
+  animation:todayFrame 1.6s linear infinite;
+}
+.md.md-today{outline-width:2px;font-weight:900;}
+@keyframes todayFrame{
+  0%,100%{outline-color:#FF1744;}
+  25%{outline-color:#FFC400;}
+  50%{outline-color:#00E676;}
+  75%{outline-color:#2979FF;}
+}
+/* Torns */
+.day-cell.cell-mati{background:linear-gradient(135deg,#0288D1,#0277BD)!important;color:#fff!important;border:none!important;font-weight:700;box-shadow:0 3px 10px rgba(2,136,209,.4);}
+.day-cell.cell-comp{background:linear-gradient(135deg,#3949AB,#283593)!important;color:#fff!important;border:none!important;font-weight:700;box-shadow:0 3px 10px rgba(57,73,171,.4);}
+.day-cell.cell-esp{background:linear-gradient(135deg,#7B1FA2,#6A1B9A)!important;color:#fff!important;border:none!important;font-weight:700;box-shadow:0 3px 10px rgba(123,31,162,.4);}
+/* Overlaps sense torn */
+.day-cell.cell-llic{background:linear-gradient(135deg,#F48FB1,#EC407A)!important;color:#fff!important;border:none!important;font-weight:700;box-shadow:0 3px 10px rgba(236,64,122,.4);}
+.day-cell.cell-bxa{background:linear-gradient(135deg,#EC407A,#880E4F)!important;color:#fff!important;border:none!important;font-weight:700;box-shadow:0 3px 10px rgba(233,30,99,.4);}
+/* Dies sense hores */
+.day-cell.cell-vac{background:linear-gradient(135deg,#26A69A,#004D40)!important;color:#fff!important;border:none!important;font-weight:700;}
+.day-cell.cell-fs{background:linear-gradient(135deg,#90A4AE,#37474F)!important;color:#fff!important;border:none!important;font-weight:700;}
+.day-cell.cell-fo{background:linear-gradient(135deg,#FF7043,#BF360C)!important;color:#fff!important;border:none!important;font-weight:700;}
+.day-cell.cell-fodes{background:linear-gradient(135deg,#FFCA28,#F9A825)!important;color:#333!important;border:none!important;font-weight:800;}
+/* Festiu auto */
+.day-cell.cell-fest{background:linear-gradient(135deg,#EF5350,#C62828)!important;color:#fff!important;border:none!important;font-weight:700;}
+/* Bolsa: VE / APCH (full cell, sense hores) */
+.day-cell.cell-ve{background:linear-gradient(135deg,#43A047,#1B5E20)!important;color:#fff!important;border:none!important;font-weight:700;box-shadow:0 3px 10px rgba(56,142,60,.4);}
+.day-cell.cell-apch{background:linear-gradient(135deg,#AED581,#8BC34A)!important;color:#33691E!important;border:none!important;font-weight:800;box-shadow:0 3px 10px rgba(139,195,74,.4);}
+/* Bolsa: VA / EBEP standalone (sense torn) */
+.day-cell.cell-va{background:linear-gradient(135deg,#8D6E63,#3E2723)!important;color:#fff!important;border:none!important;font-weight:700;}
+.day-cell.cell-ebep{background:linear-gradient(135deg,#00ACC1,#006064)!important;color:#fff!important;border:none!important;font-weight:700;}
+/* Seleccionat */
+.day-cell.selected{
+  background:#546E7A!important;color:#fff!important;
+  border:2px solid #37474F!important;
+  transform:scale(.84);box-shadow:inset 0 0 10px rgba(0,0,0,.25)!important;
+}
+
+/* Franja overlay (LLIC, BAIXA, VA, EBEP o FO/DES sobre el dia) */
+.day-cell.has-llic::before,
+.day-cell.has-bxa::before,
+.day-cell.has-va::before,
+.day-cell.has-ebep::before,
+.day-cell.has-fodes::before{
+  content:attr(data-overlay);
+  position:absolute;top:0;left:0;right:0;
+  font-size:7px;font-weight:900;text-align:center;
+  padding:2px 0;border-radius:8px 8px 0 0;z-index:1;color:#fff;
+}
+.day-cell.has-llic::before{background:rgba(248,187,208,.97);color:#880E4F;}
+.day-cell.has-bxa::before{background:rgba(233,30,99,.95);}
+.day-cell.has-va::before{background:rgba(109,76,65,.95);}
+.day-cell.has-ebep::before{background:rgba(0,131,143,.95);}
+.day-cell.has-fodes::before{background:rgba(255,202,40,.97);color:#5D4037;}
+
+.ev-icon{font-size:11px;line-height:1;margin-top:1px;}
+.ev-lbl{font-size:7.5px;margin-top:1px;opacity:.92;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:95%;text-align:center;font-weight:700;}
+
+/* ===== INFO PANEL ===== */
+.info-panel{background:var(--sur);margin:0 12px;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;}
+.info-hdr{background:linear-gradient(135deg,#F7F7F7,#EEEEEE);padding:11px 14px;display:flex;align-items:center;justify-content:space-between;}
+.info-title{font-size:13px;font-weight:800;color:var(--txt);}
+.info-badge{background:var(--blue);color:#fff;border-radius:20px;padding:2px 9px;font-size:10px;font-weight:800;display:none;}
+.info-body{padding:12px 14px;min-height:56px;}
+.info-empty{color:var(--txt2);font-size:13px;text-align:center;padding:14px 0;}
+.ev-card{background:#FAFAFA;border-radius:10px;padding:10px 12px;margin-bottom:8px;border-left:4px solid #ccc;display:flex;align-items:center;gap:10px;animation:slideCard .25s var(--spring);}
+.ev-card.mati{border-color:var(--mati);background:var(--mati-bg);}
+.ev-card.comp{border-color:var(--comp);background:var(--comp-bg);}
+.ev-card.esp{border-color:var(--esp);background:var(--esp-bg);}
+.ev-card.llic{border-color:var(--llic-d);background:var(--llic-bg);}
+.ev-card.bxa{border-color:var(--bxa-d);background:var(--bxa-bg);}
+.ev-card.vac{border-color:var(--vac);background:var(--vac-bg);}
+.ev-card.fs{border-color:var(--fs);background:var(--fs-bg);}
+.ev-card.fo{border-color:var(--fo);background:var(--fo-bg);}
+.ev-card.fodes{border-color:var(--fod-d);background:var(--fod-bg);}
+.ev-card.fest{border-color:var(--fest);background:var(--fest-bg);}
+.ev-card.ve{border-color:var(--ve);background:var(--ve-bg);}
+.ev-card.apch{border-color:var(--apch);background:var(--apch-bg);}
+.ev-card.va{border-color:var(--va);background:var(--va-bg);}
+.ev-card.ebep{border-color:var(--ebep);background:var(--ebep-bg);}
+.evc-icon{font-size:22px;flex-shrink:0;}
+.evc-info{flex:1;min-width:0;}
+.evc-title{font-size:13px;font-weight:800;color:var(--txt);}
+.evc-time{font-size:11px;color:var(--txt2);margin-top:2px;font-weight:600;}
+.evc-money{font-size:11px;font-weight:900;color:var(--fod-d);margin-top:2px;}
+/* Accions per event (editar tipus / eliminar) */
+.evc-actions{display:flex;gap:6px;flex-shrink:0;align-items:center;}
+.evc-btn{width:32px;height:32px;border:none;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;background:rgba(255,255,255,.75);box-shadow:0 1px 4px rgba(0,0,0,.14);-webkit-tap-highlight-color:transparent;transition:transform .12s;}
+.evc-btn:active{transform:scale(.86);}
+/* Full "canviar tipus" */
+.et-item{display:flex;align-items:center;gap:12px;padding:11px 20px;border-bottom:1px solid #F5F5F5;cursor:pointer;transition:background .13s;}
+.et-item:active{background:#F5F5F5;}
+.et-item.current{background:#E3F2FD;}
+.et-icon{font-size:20px;width:34px;text-align:center;flex-shrink:0;}
+.et-name{flex:1;font-size:13px;font-weight:700;color:var(--txt);}
+
+/* ===== TOOLBAR (2 ROWS) ===== */
+.toolbar{
+  position:fixed;bottom:0;left:0;width:100%;
+  background:rgba(255,255,255,.96);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--bdr);
+  padding:6px 8px 14px;z-index:100;
+  box-shadow:0 -4px 24px rgba(0,0,0,.10);
+}
+.status-bar{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:5px;min-height:18px;}
+.status-txt{font-size:11px;font-weight:700;color:var(--txt2);text-align:center;transition:color .2s;}
+.sel-badge{background:var(--red);color:#fff;border-radius:20px;padding:2px 9px;font-size:10px;font-weight:800;display:none;animation:popIn .3s var(--spring);}
+.btn-sel-save{background:linear-gradient(135deg,#2E7D32,#43A047);color:#fff;border:none;border-radius:20px;padding:4px 14px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;display:none;animation:popIn .25s var(--spring);box-shadow:0 2px 8px rgba(46,125,50,.4);-webkit-tap-highlight-color:transparent;}
+.btn-sel-save:active{transform:scale(.93);}
+.btn-sel-save.mode-borrar{background:linear-gradient(135deg,#E53935,#B71C1C);box-shadow:0 2px 8px rgba(229,57,53,.4);}
+.btn-sel-cancel{background:#ECEFF1;color:#546E7A;border:none;border-radius:50%;width:22px;height:22px;font-size:11px;font-weight:900;cursor:pointer;display:none;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;}
+.btn-sel-cancel:active{background:#CFD8DC;}
+.btn-row{display:flex;gap:4px;justify-content:center;align-items:center;margin-bottom:4px;}
+/* Buttons */
+.tbtn{
+  flex:1;max-width:50px;height:46px;border:none;border-radius:13px;
+  cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;
+  -webkit-tap-highlight-color:transparent;position:relative;
+  transition:transform .15s var(--spring),box-shadow .15s;overflow:hidden;
+}
+.tbtn:active{transform:scale(.88)!important;}
+.tbtn svg{width:20px;height:20px;fill:#fff;flex-shrink:0;}
+.tbtn .tlbl{font-size:7.5px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.2px;}
+/* Row 1 colors */
+.t-cfg{background:linear-gradient(135deg,#607D8B,#455A64);}
+.t-mat{background:linear-gradient(135deg,var(--mati),var(--mati-d));}
+.t-com{background:linear-gradient(135deg,var(--comp),var(--comp-d));}
+.t-esp{background:linear-gradient(135deg,var(--esp),var(--esp-d));}
+.t-bor{background:linear-gradient(135deg,#E53935,#B71C1C);}
+.t-prt{background:linear-gradient(135deg,#455A64,#263238);}
+/* Row 2 colors */
+.t-llic{background:linear-gradient(135deg,var(--llic),var(--llic-d));}
+.t-bxa{background:linear-gradient(135deg,#EC407A,var(--bxa-d));}
+.t-ve{background:linear-gradient(135deg,#43A047,var(--ve-d));}
+.t-apch{background:linear-gradient(135deg,#9CCC65,var(--apch-d));}
+.t-va{background:linear-gradient(135deg,#8D6E63,var(--va-d));}
+.t-ebep{background:linear-gradient(135deg,#00ACC1,var(--ebep-d));}
+.t-vac{background:linear-gradient(135deg,#26A69A,var(--vac-d));}
+.t-fs{background:linear-gradient(135deg,#90A4AE,var(--fs-d));}
+.t-fo{background:linear-gradient(135deg,#FF7043,var(--fo-d));}
+.t-fod{background:linear-gradient(135deg,#FFCA28,var(--fod-d));}
+/* Active state */
+.tbtn.is-active{transform:scale(1.12)!important;box-shadow:0 6px 20px rgba(0,0,0,.3);z-index:2;animation:pulseBtn 2s ease-in-out infinite;}
+.tbtn.is-active::before{content:'';position:absolute;inset:-3px;border-radius:16px;border:2.5px solid #fff;opacity:.85;}
+/* Row divider */
+.row-divider{height:1px;background:var(--bdr);margin:2px 0;}
+/* Toolbar row 2: scrollable, auto-centered when content fits */
+.btn-row-2{
+  display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;padding:0 2px 2px;
+  justify-content:safe center;
+}
+.btn-row-2::-webkit-scrollbar{display:none;}
+.btn-row-2 .tbtn{flex:0 0 46px;width:46px;max-width:none;height:44px;}
+
+/* ===== BOLSA DE DIES ===== */
+.bolsa-section{margin:0 12px 4px;}
+.bolsa-hdr{display:flex;align-items:center;justify-content:space-between;padding:0 2px 6px;}
+.bolsa-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--txt2);}
+.btn-edit-bolsa{
+  background:#E3F2FD;border:none;border-radius:8px;padding:5px 11px;
+  cursor:pointer;font-size:11px;font-weight:800;color:var(--blue);
+  -webkit-tap-highlight-color:transparent;
+}
+.btn-edit-bolsa:active{background:#BBDEFB;}
+.bolsa-cards{
+  display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;padding-bottom:2px;
+}
+.bolsa-cards::-webkit-scrollbar{display:none;}
+.bolsa-card{
+  flex-shrink:0;background:var(--sur);border-radius:14px;
+  box-shadow:var(--sh);padding:10px 14px;min-width:96px;
+  border-top:3px solid transparent;
+}
+.bolsa-card.bc-ve{border-color:var(--ve);}
+.bolsa-card.bc-apch{border-color:var(--apch);}
+.bolsa-card.bc-va{border-color:var(--va);}
+.bolsa-card.bc-ebep{border-color:var(--ebep);}
+.bc-name{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);display:flex;align-items:center;gap:4px;}
+.bc-remaining{font-size:26px;font-weight:900;line-height:1;margin:3px 0 1px;}
+.bc-rem-lbl{font-size:8px;color:var(--txt2);font-weight:600;}
+.bc-track{height:4px;background:#F0F0F0;border-radius:2px;margin-top:7px;overflow:hidden;}
+.bc-fill{height:100%;border-radius:2px;transition:width .9s var(--ease);}
+.bc-used{font-size:8px;color:var(--txt2);font-weight:600;margin-top:4px;}
+/* Bolsa exhaurida / avís */
+.bolsa-card.bc-exhausted{border-color:#E53935!important;animation:pulseWarn 2s ease-in-out infinite;}
+.bolsa-card.bc-exhausted .bc-remaining{color:#E53935!important;}
+.bolsa-card.bc-exhausted .bc-rem-lbl{color:#E53935!important;font-weight:900;}
+.bolsa-card.bc-warning{border-color:#F57C00!important;}
+.bolsa-card.bc-warning .bc-rem-lbl{color:#F57C00!important;font-weight:900;}
+@keyframes pulseWarn{0%,100%{box-shadow:0 2px 12px rgba(229,57,53,.15)}50%{box-shadow:0 2px 20px rgba(229,57,53,.45)}}
+
+/* ===== DROPDOWN BOTTOM SHEET ===== */
+.sheet-ov{position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);display:none;align-items:flex-end;}
+.sheet-ov.open{display:flex;}
+.btm-sheet{background:var(--sur);border-radius:22px 22px 0 0;width:100%;max-height:75vh;overflow-y:auto;padding-bottom:30px;animation:sheetUp .32s var(--ease);box-shadow:var(--sh-l);}
+.sh-handle{width:40px;height:5px;background:#E0E0E0;border-radius:3px;margin:13px auto 0;}
+.sh-title{font-size:16px;font-weight:900;padding:12px 20px 14px;border-bottom:1px solid var(--bdr);}
+.cal-item{padding:14px 20px;display:flex;align-items:center;gap:13px;border-bottom:1px solid #F5F5F5;cursor:pointer;transition:background .13s;}
+.cal-item:active{background:#F5F5F5;}
+.cal-item.active-cal{background:#E3F2FD;}
+.cal-icon{width:40px;height:40px;border-radius:12px;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.cal-info{flex:1;min-width:0;}
+.cal-name{font-size:13px;font-weight:800;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cal-own{font-size:11px;color:var(--txt2);}
+.cal-chk{color:var(--blue);font-size:20px;font-weight:900;}
+.sh-action{margin:10px 16px 0;padding:14px 18px;background:#F0F7FF;border-radius:12px;display:flex;align-items:center;gap:13px;text-decoration:none;color:var(--blue);font-weight:800;font-size:13px;}
+
+/* ===== MODALS ===== */
+.modal-ov{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.5);backdrop-filter:blur(5px);display:none;align-items:flex-end;}
+.modal-ov.open{display:flex;}
+.modal-sheet{background:var(--sur);border-radius:22px 22px 0 0;width:100%;max-height:92vh;overflow-y:auto;padding-bottom:40px;animation:sheetUp .35s var(--ease);box-shadow:var(--sh-l);}
+.mod-drag{width:40px;height:5px;background:#E0E0E0;border-radius:3px;margin:13px auto 16px;}
+.mod-title{font-size:18px;font-weight:900;padding:0 20px 15px;border-bottom:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;}
+.mod-close{background:#F5F5F5;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:16px;color:var(--txt2);display:flex;align-items:center;justify-content:center;}
+.mod-close:active{background:var(--bdr);}
+.mod-body{padding:18px 20px;}
+.sec-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--blue);margin:0 0 12px;padding-bottom:6px;border-bottom:2px solid #E3F2FD;}
+.form-g{margin-bottom:16px;}
+.form-lbl{display:block;font-size:11px;font-weight:700;color:var(--txt2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+.form-in{width:100%;padding:11px 13px;border:1.5px solid var(--bdr);border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;font-weight:500;background:#FAFAFA;transition:border-color .2s;}
+.form-in:focus{outline:none;border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(21,101,192,.1);}
+.time-row{display:flex;align-items:center;gap:8px;}
+.time-sep{font-weight:900;color:var(--txt2);}
+.btn-save{width:100%;padding:14px;background:linear-gradient(135deg,var(--blue),#0D47A1);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:900;cursor:pointer;margin-top:10px;box-shadow:0 4px 14px rgba(21,101,192,.4);font-family:'Inter',sans-serif;}
+.btn-save:active{transform:scale(.97);}
+.btn-save.purple{background:linear-gradient(135deg,var(--esp),var(--esp-d));box-shadow:0 4px 14px rgba(123,31,162,.4);}
+/* Festivos editor */
+.fes-toolbar{display:flex;gap:8px;margin-bottom:12px;align-items:center;}
+.btn-add-fes{flex:1;padding:9px 12px;background:#E8F5E9;color:#2E7D32;border:1.5px solid #A5D6A7;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;}
+.btn-add-fes:active{background:#C8E6C9;}
+.btn-sync{width:42px;height:40px;background:linear-gradient(135deg,var(--mati),var(--mati-d));border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(2,136,209,.35);transition:transform .3s;flex-shrink:0;}
+.btn-sync:active{transform:rotate(180deg);}
+.fes-item{display:flex;gap:6px;margin-bottom:6px;align-items:center;}
+.fes-date{width:130px;flex-shrink:0;}
+.btn-del-fes{width:34px;height:40px;flex-shrink:0;background:linear-gradient(135deg,#E53935,#B71C1C);color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+.btn-del-fes:active{transform:scale(.88);}
+.anio-row{display:flex;gap:8px;align-items:center;}
+.anio-row select{flex:1;}
+
+/* ===== STATUS OVERLAY ===== */
+#statusOv{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(20,20,20,.9);color:#fff;padding:13px 24px;border-radius:100px;font-weight:800;font-size:14px;z-index:300;display:none;pointer-events:none;backdrop-filter:blur(6px);box-shadow:var(--sh-l);}
+
+/* ===== YEAR VIEW ===== */
+#yearView{display:none;position:fixed;inset:0;background:#F0F2F5;z-index:500;overflow-y:auto;}
+.year-hdr{background:linear-gradient(135deg,#263238,#37474F);padding:11px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;box-shadow:0 2px 10px rgba(0,0,0,.35);}
+.year-hdr select{font-size:20px;font-weight:900;color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:9px;padding:5px 9px;cursor:pointer;font-family:'Inter',sans-serif;}
+.year-hdr select option{background:#263238;}
+.btn-back{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff;border-radius:9px;padding:8px 13px;cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;font-family:'Inter',sans-serif;}
+.btn-back:active{background:rgba(255,255,255,.22);}
+.btn-print{background:linear-gradient(135deg,#FF5722,#D84315);border:none;color:#fff;border-radius:9px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:800;box-shadow:0 3px 10px rgba(255,87,34,.4);display:flex;align-items:center;gap:6px;font-family:'Inter',sans-serif;}
+.btn-print:active{transform:scale(.95);}
+/* Print doc */
+.print-doc{max-width:820px;margin:14px auto;background:var(--sur);border-radius:var(--r);box-shadow:var(--sh-m);overflow:hidden;}
+.doc-hdr{background:linear-gradient(135deg,var(--red),var(--red-d));padding:20px 24px;display:flex;align-items:center;justify-content:space-between;color:#fff;}
+.doc-logo{height:44px;background:rgba(255,255,255,.92);border-radius:8px;padding:4px 8px;}
+.doc-title{font-size:22px;font-weight:900;letter-spacing:-.5px;}
+.doc-year{font-size:14px;opacity:.78;margin-top:4px;}
+.doc-user{background:rgba(255,255,255,.18);border-radius:10px;padding:7px 13px;font-size:11px;font-weight:800;text-align:right;max-width:42%;overflow-wrap:anywhere;flex-shrink:1;}
+.year-legend{display:flex;gap:8px;flex-wrap:wrap;padding:8px 16px;border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);}
+.print-year-title{display:none;}
+.yl{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--txt2);}
+.yl-dot{width:12px;height:12px;border-radius:3px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+.doc-body{padding:12px 16px;}
+.year-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px;}
+.mini-cal{border:1px solid #E0E0E0;border-radius:11px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;-webkit-tap-highlight-color:transparent;}
+.mini-cal:active{transform:scale(.96);}
+@media(hover:hover){.mini-cal:hover{transform:translateY(-2px);box-shadow:var(--sh-m);}}
+.mini-cal-hdr{background:linear-gradient(135deg,#37474F,#263238);padding:5px;text-align:center;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+.mini-cal-hdr h4{color:#fff;font-size:10.5px;font-weight:900;text-transform:uppercase;letter-spacing:.4px;}
+.mini-cal-body{padding:3px;}
+.mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;}
+.mh{font-size:7px;color:#9E9E9E;text-align:center;font-weight:700;padding:2px 0;}
+.md{aspect-ratio:1;font-size:8px;display:flex;align-items:center;justify-content:center;border-radius:3px;color:#333;position:relative;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+/* Mini day colors */
+.md.hm{background:#0288D1!important;color:#fff!important;font-weight:800;}
+.md.hc{background:#3949AB!important;color:#fff!important;font-weight:800;}
+.md.he{background:#7B1FA2!important;color:#fff!important;font-weight:800;}
+.md.hf{background:#EF5350!important;color:#fff!important;font-weight:800;}
+.md.hvac{background:#00897B!important;color:#fff!important;font-weight:800;}
+.md.hfs{background:#607D8B!important;color:#fff!important;font-weight:800;}
+.md.hfo{background:#F4511E!important;color:#fff!important;font-weight:800;}
+.md.hfod{background:#F9A825!important;color:#333!important;font-weight:800;}
+/* Bolsa colors in mini-cal */
+.md.hve{background:#388E3C!important;color:#fff!important;font-weight:800;}
+.md.hapch{background:#AED581!important;color:#33691E!important;font-weight:800;}
+/* Overlay borders in mini-cal */
+.md.hll{border-top:3px solid #F48FB1!important;}
+.md.hbx{border-top:3px solid #E91E63!important;}
+.md.hva{border-top:3px solid #6D4C41!important;}
+.md.hebep{border-top:3px solid #00838F!important;}
+.md.hfodb{border-top:3px solid #F9A825!important;}
+/* Doc footer */
+.doc-foot{border-top:1px solid var(--bdr);padding:8px 16px;display:grid;grid-template-columns:repeat(5,1fr);gap:6px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+.doc-stat{text-align:center;padding:7px 4px;background:#F9F9F9;border-radius:8px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+.doc-sv{font-size:16px;font-weight:900;}
+.doc-sl{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);margin-top:2px;}
+/* Extra stats row in doc */
+.doc-extras{border-top:1px solid var(--bdr);padding:8px 16px;display:flex;gap:8px;flex-wrap:wrap;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+.doc-extra-chip{background:#F9F9F9;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:700;border-left:3px solid transparent;}
+.doc-extras-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--txt2);padding:6px 16px 2px;width:100%;border-top:1px solid var(--bdr);}
+.chip-tot{font-weight:500;color:var(--txt2);font-size:10px;margin:0 1px;}
+.doc-date{text-align:right;padding:5px 16px;font-size:10px;color:#9E9E9E;border-top:1px solid #EEE;}
+
+/* ===== ANIMATIONS ===== */
+@keyframes sheetUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes popIn{from{transform:scale(0.4);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes slideCard{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes pulseBtn{0%{box-shadow:0 6px 20px rgba(0,0,0,.3)}50%{box-shadow:0 6px 32px rgba(0,0,0,.5)}100%{box-shadow:0 6px 20px rgba(0,0,0,.3)}}
+
+/* ===== HOVER STATES (desktop pointer) ===== */
+@media(hover:hover){
+  .day-cell:not(.empty):not(.selected):hover{transform:scale(.94);opacity:.88;}
+  .bolsa-card:hover{transform:translateY(-2px);box-shadow:var(--sh-m);transition:transform .18s var(--ease),box-shadow .18s var(--ease);}
+  .leg:hover{background:var(--bg);}
+  .xchip:hover{box-shadow:var(--sh-m);transform:translateY(-1px);}
+}
+
+/* ===== DESKTOP LAYOUT ===== */
+@media(min-width:640px){
+  body{max-width:580px;margin:0 auto;box-shadow:0 0 80px rgba(0,0,0,.07);}
+  .app-header{border-radius:0 0 4px 4px;}
+  .toolbar{
+    max-width:580px!important;
+    left:50%!important;right:auto!important;
+    transform:translateX(-50%);
+    border-radius:18px 18px 0 0;
+    border-left:1px solid var(--bdr);
+    border-right:1px solid var(--bdr);
+  }
+  .day-cell{min-height:0;}
+  .dashboard{margin:10px 12px;}
+  .ring-wrap{width:80px;height:80px;}
+  .ring-svg{width:80px;height:80px;}
+}
+
+/* ===== PRINT ===== */
+@media print{
+  @page{size:A4 portrait;margin:3mm;}
+  body{background:#fff!important;padding:0;max-width:none!important;width:100%!important;margin:0!important;box-shadow:none!important;}
+  body>*:not(#yearView){display:none!important;}
+  #yearView{display:block!important;position:static;height:auto;overflow:visible;background:#fff!important;}
+  .year-hdr{display:none!important;}
+  .doc-hdr{display:none!important;}
+  .print-year-title{
+    display:block!important;
+    font-size:22px;font-weight:900;letter-spacing:-.5px;
+    text-align:center;padding:6px 0 4px;color:#1A1A1A;
+    border-bottom:2px solid #E0E0E0;margin-bottom:0;
+  }
+  .print-doc{box-shadow:none!important;margin:0;border-radius:0;max-width:none!important;width:100%!important;}
+  /* Compact everything for A4 fit */
+  .doc-body{padding:4px 2px!important;}
+  .year-grid{grid-template-columns:repeat(4,1fr)!important;gap:5px!important;margin-bottom:3px!important;}
+  .mini-cal{border-radius:5px!important;}
+  .mini-cal-hdr{padding:3px!important;}
+  .mini-cal-hdr h4{font-size:9px!important;}
+  .mini-cal-body{padding:2px!important;}
+  .md{aspect-ratio:1!important;height:auto!important;font-size:7.5px!important;}
+  .day-cell.today,.md.md-today{outline:none!important;animation:none!important;}
+  .mh{padding:1px 0!important;}
+  .year-legend{padding:4px 2px!important;gap:6px!important;border-bottom:none!important;}
+  .yl{font-size:9px!important;}
+  .yl-dot{width:10px!important;height:10px!important;}
+  .doc-foot{padding:4px 2px!important;gap:4px!important;}
+  .doc-stat{padding:4px 3px!important;border-radius:5px!important;}
+  .doc-sv{font-size:13px!important;}
+  .doc-sl{font-size:7px!important;margin-top:1px!important;}
+  .doc-extras{padding:4px 2px!important;gap:5px!important;}
+  .doc-extras-title{padding:3px 2px 1px!important;font-size:8px!important;border-top:none!important;}
+  .doc-extra-chip{padding:3px 6px!important;font-size:8.5px!important;border-radius:4px!important;}
+  .doc-date{padding:3px 2px!important;font-size:9px!important;}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+}
+
+/* ==========================================================================
+   v2 — TEMA FOSC
+   El tema es resol a <head> abans del primer pintat i s'escriu a
+   data-theme de l'arrel, així que aquí només cal un bloc de tokens.
+   ========================================================================== */
+:root{ --track:#F0F0F0; --sur-2:#FAFAFA; --sur-3:#F5F5F5; --accent-soft:#E3F2FD; }
+
+:root[data-theme="dark"]{
+  --sur:#161A20; --bg:#0E1116;
+  --bdr:#2A313B; --txt:#E9EDF3; --txt2:#94A1B2;
+  --track:#242B34; --sur-2:#1C2129; --sur-3:#212832; --accent-soft:#16324D;
+  --sh:0 2px 12px rgba(0,0,0,.55);
+  --sh-m:0 4px 24px rgba(0,0,0,.65);
+  --sh-l:0 8px 40px rgba(0,0,0,.75);
+  --blue:#63ACF7; --blue-l:#96C9FF;
+  --green:#4CAF6A; --green-l:#6FD991;
+  --mati-bg:#122430; --comp-bg:#181C34; --esp-bg:#26182C;
+  --llic-bg:#2F1B24; --bxa-bg:#2F1B24; --vac-bg:#11241F;
+  --fs-bg:#1B2026; --fo-bg:#2B1B15; --fod-bg:#2B2514;
+  --ve-bg:#142518; --apch-bg:#1C2515; --va-bg:#231C18; --ebep-bg:#102327;
+  --fest-bg:#3A1F21;
+}
+:root[data-theme="dark"] body{
+  background:linear-gradient(160deg,#0B0E13 0%,#0E1116 45%,#0C1114 100%);
+}
+:root[data-theme="dark"] .prog-track,
+:root[data-theme="dark"] .ss-track,
+:root[data-theme="dark"] .bc-track{ background:var(--track); }
+:root[data-theme="dark"] .ss-ring::before{ background:var(--sur); }
+:root[data-theme="dark"] .ss-cal,
+:root[data-theme="dark"] .acc-btn{ background:linear-gradient(135deg,#15304A,#0E2338); }
+:root[data-theme="dark"] .acc-name{ color:var(--blue-l); }
+:root[data-theme="dark"] .acc-hint{ color:#5D7F9E; }
+:root[data-theme="dark"] .btn-avui,
+:root[data-theme="dark"] .btn-edit-bolsa{ background:var(--accent-soft); color:var(--blue-l); }
+:root[data-theme="dark"] .info-hdr{ background:linear-gradient(135deg,#1B212A,#161A20); }
+:root[data-theme="dark"] .ev-card{ background:var(--sur-2); border-left-color:#3A424E; }
+:root[data-theme="dark"] .evc-btn{ background:rgba(255,255,255,.10); color:#E9EDF3; }
+:root[data-theme="dark"] .et-item,
+:root[data-theme="dark"] .cal-item{ border-bottom-color:#232A34; }
+:root[data-theme="dark"] .et-item:active,
+:root[data-theme="dark"] .cal-item:active{ background:var(--sur-3); }
+:root[data-theme="dark"] .et-item.current,
+:root[data-theme="dark"] .cal-item.active-cal,
+:root[data-theme="dark"] .cal-icon{ background:var(--accent-soft); }
+:root[data-theme="dark"] .toolbar{
+  background:rgba(18,21,27,.94); border-top-color:var(--bdr);
+  box-shadow:0 -4px 24px rgba(0,0,0,.55);
+}
+:root[data-theme="dark"] .btn-sel-cancel{ background:#28303A; color:#9FB0C2; }
+:root[data-theme="dark"] .sh-handle,
+:root[data-theme="dark"] .mod-drag{ background:#333B47; }
+:root[data-theme="dark"] .sh-action{ background:var(--accent-soft); color:var(--blue-l); }
+:root[data-theme="dark"] .mod-close{ background:var(--sur-3); color:var(--txt2); }
+:root[data-theme="dark"] .sec-label{ border-bottom-color:#22364B; }
+:root[data-theme="dark"] .form-in,
+:root[data-theme="dark"] .obj-input{ background:var(--sur-2); color:var(--txt); border-color:var(--bdr); }
+:root[data-theme="dark"] .form-in:focus{ background:var(--sur-3); }
+:root[data-theme="dark"] .btn-add-fes{ background:#14291A; color:#7BD495; border-color:#2C5137; }
+:root[data-theme="dark"] .day-cell.weekend-day{ color:#FF8A80; }
+:root[data-theme="dark"] #yearView{ background:var(--bg); }
+:root[data-theme="dark"] .mini-cal{ border-color:var(--bdr); }
+:root[data-theme="dark"] .md{ color:#C3CCD8; }
+:root[data-theme="dark"] .mh{ color:#6C7A8A; }
+:root[data-theme="dark"] .doc-stat,
+:root[data-theme="dark"] .doc-extra-chip{ background:var(--sur-2); color:var(--txt); }
+:root[data-theme="dark"] .doc-date{ border-top-color:var(--bdr); color:#6C7A8A; }
+:root[data-theme="dark"] .nav-arr{ background:var(--sur-3); }
+:root[data-theme="dark"] .nav-arr:active{ background:#333B47; }
+
+/* Botó de tema al capçal */
+.btn-hdr.btn-theme{ padding:7px 9px; font-size:14px; line-height:1; }
+
+/* ==========================================================================
+   v2 — MOVIMENT REDUÏT
+   Respecta la preferència del sistema: res de marcs parpadejants ni pulsos.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms!important; animation-iteration-count:1!important;
+    transition-duration:.001ms!important; scroll-behavior:auto!important;
+  }
+  .day-cell.today,.md.md-today{ animation:none!important; outline-color:#FF1744!important; }
+}
+
+/* ==========================================================================
+   v2 — FOCUS VISIBLE (navegació per teclat)
+   ========================================================================== */
+:focus-visible{ outline:3px solid var(--blue); outline-offset:2px; border-radius:6px; }
+.day-cell:focus-visible{ outline-offset:-2px; }
+
+/* ==========================================================================
+   v2 — TRANSICIÓ DE MES
+   Les dades del mes ja són a memòria, així que el canvi pot ser una animació
+   de veritat en comptes d'un estat d'espera.
+   ========================================================================== */
+.cal-grid.slide-next{ animation:slideNext .26s var(--ease); }
+.cal-grid.slide-prev{ animation:slidePrev .26s var(--ease); }
+@keyframes slideNext{ from{ transform:translateX(22px); opacity:.35 } to{ transform:none; opacity:1 } }
+@keyframes slidePrev{ from{ transform:translateX(-22px); opacity:.35 } to{ transform:none; opacity:1 } }
+.month-label{ transition:opacity .18s var(--ease); }
+
+/* ==========================================================================
+   v2 — ESQUELET DE CÀRREGA
+   Substitueix el "…" i el fos al 30 %: ocupa el mateix espai, així que no hi
+   ha cap salt de disposició quan arriben les dades.
+   ========================================================================== */
+.sk{
+  position:relative; overflow:hidden;
+  background:var(--track)!important; color:transparent!important;
+  border-radius:8px;
+}
+.sk::after{
+  content:''; position:absolute; inset:0; transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);
+  animation:shimmer 1.25s infinite;
+}
+:root[data-theme="dark"] .sk::after{
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.09),transparent);
+}
+@keyframes shimmer{ to{ transform:translateX(100%) } }
+.day-cell.sk-cell{ background:var(--track)!important; border-color:transparent!important; }
+
+/* ==========================================================================
+   v2 — INDICADOR DE SINCRONITZACIÓ
+   Un punt discret al capçal. Res de vels ni diàlegs bloquejants.
+   ========================================================================== */
+.sync-pill{
+  display:flex; align-items:center; gap:5px;
+  background:rgba(255,255,255,.16); border-radius:20px;
+  padding:4px 9px; font-size:10px; font-weight:800; color:#fff;
+  opacity:0; transform:scale(.85); pointer-events:none;
+  transition:opacity .2s var(--ease), transform .2s var(--ease);
+}
+.sync-pill.on{ opacity:1; transform:scale(1); }
+.sync-dot{
+  width:7px; height:7px; border-radius:50%; background:#FFEB3B;
+  animation:syncPulse 1s ease-in-out infinite;
+}
+.sync-pill.stale .sync-dot{ background:#FF8A65; animation:none; }
+@keyframes syncPulse{ 0%,100%{ opacity:1 } 50%{ opacity:.25 } }
+
+/* ==========================================================================
+   v2 — AVISOS (toast) AMB DESFER
+   Reemplacen l'overlay central bloquejant i els confirm()/alert() del sistema.
+   ========================================================================== */
+.toast-wrap{
+  position:fixed; left:50%; transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom,0px) + 118px);
+  z-index:400; display:flex; flex-direction:column-reverse; gap:8px;
+  width:min(430px,calc(100% - 24px)); pointer-events:none;
+}
+.toast{
+  display:flex; align-items:center; gap:10px;
+  background:rgba(26,30,36,.97); color:#fff;
+  border-radius:14px; padding:11px 14px;
+  font-size:12.5px; font-weight:700; line-height:1.35;
+  box-shadow:var(--sh-l); backdrop-filter:blur(10px);
+  pointer-events:auto; animation:toastIn .26s var(--spring);
+  border-left:4px solid #4CAF50;
+}
+.toast.t-err{ border-left-color:#EF5350; }
+.toast.t-warn{ border-left-color:#FFA726; }
+.toast.t-info{ border-left-color:#42A5F5; }
+.toast.leaving{ animation:toastOut .2s var(--ease) forwards; }
+.toast-msg{ flex:1; min-width:0; }
+.toast-btn{
+  background:rgba(255,255,255,.15); border:none; color:#fff;
+  border-radius:9px; padding:6px 12px; font-size:11.5px; font-weight:900;
+  cursor:pointer; font-family:inherit; flex-shrink:0;
+  -webkit-tap-highlight-color:transparent; transition:background .15s;
+}
+.toast-btn:active{ background:rgba(255,255,255,.3); }
+@keyframes toastIn{ from{ transform:translateY(14px) scale(.94); opacity:0 } to{ transform:none; opacity:1 } }
+@keyframes toastOut{ to{ transform:translateY(8px) scale(.96); opacity:0 } }
+
+/* ==========================================================================
+   v2 — CONFIRMACIÓ EN LÍNIA
+   Un full inferior en comptes del confirm() del navegador, que en un iframe
+   d'Apps Script apareix desancorat de l'aplicació.
+   ========================================================================== */
+.confirm-sheet{ padding:6px 20px 8px; }
+.confirm-txt{ font-size:13.5px; color:var(--txt); line-height:1.5; margin-bottom:18px; }
+.confirm-row{ display:flex; gap:10px; }
+.confirm-row button{
+  flex:1; padding:13px; border:none; border-radius:12px;
+  font-size:14px; font-weight:900; cursor:pointer; font-family:inherit;
+  -webkit-tap-highlight-color:transparent;
+}
+.cf-no{ background:var(--sur-3); color:var(--txt2); }
+.cf-yes{ background:linear-gradient(135deg,#E53935,#B71C1C); color:#fff; box-shadow:0 4px 14px rgba(229,57,53,.35); }
+.cf-yes.safe{ background:linear-gradient(135deg,var(--blue),#0D47A1); box-shadow:0 4px 14px rgba(21,101,192,.35); }
+.confirm-row button:active{ transform:scale(.97); }
+
+/* ==========================================================================
+   v2 — SELECCIÓ ARROSSEGANT + SELECCIÓ RÀPIDA
+   ========================================================================== */
+.cal-grid.mode-on{ touch-action:none; }        /* el dit pinta, no fa scroll */
+.cal-card.mode-on{ box-shadow:0 0 0 2px var(--mode-col,var(--blue)), var(--sh); }
+.day-cell.selected::after{
+  content:'✓'; position:absolute; bottom:2px; right:4px;
+  font-size:9px; font-weight:900; color:#fff; opacity:.9;
+}
+.day-cell.just-saved{ animation:justSaved .45s var(--spring); }
+@keyframes justSaved{ 0%{ transform:scale(.8) } 55%{ transform:scale(1.1) } 100%{ transform:scale(1) } }
+
+.quick-bar{
+  display:none; gap:6px; padding:0 12px 8px;
+  overflow-x:auto; scrollbar-width:none;
+}
+.quick-bar.on{ display:flex; }
+.quick-bar::-webkit-scrollbar{ display:none; }
+.qbtn{
+  flex-shrink:0; background:var(--sur); border:1.5px solid var(--bdr);
+  border-radius:20px; padding:6px 13px; font-size:11px; font-weight:800;
+  color:var(--txt2); cursor:pointer; font-family:inherit;
+  box-shadow:var(--sh); -webkit-tap-highlight-color:transparent;
+  transition:transform .12s var(--spring);
+}
+.qbtn:active{ transform:scale(.92); }
+.qbtn.q-hint{
+  border-style:dashed; box-shadow:none; background:transparent;
+  cursor:default; font-weight:700; opacity:.8;
+}
+
+/* ==========================================================================
+   v2 — COMPTADORS ANIMATS
+   ========================================================================== */
+.num-tick{ transition:transform .3s var(--spring); display:inline-block; }
+.num-tick.bump{ transform:scale(1.18); }
+
+/* ==========================================================================
+   v2 — IMPRESSIÓ: sempre en clar, encara que la pantalla vagi en fosc
+   ========================================================================== */
+@media print{
+  :root[data-theme="dark"]{
+    --sur:#FFFFFF; --bg:#FFFFFF; --bdr:#E0E0E0; --txt:#1A1A1A; --txt2:#757575;
+    --sur-2:#FAFAFA; --sur-3:#F5F5F5; --track:#F0F0F0;
+  }
+  :root[data-theme="dark"] .md{ color:#333; }
+  :root[data-theme="dark"] .doc-stat,
+  :root[data-theme="dark"] .doc-extra-chip{ background:#F9F9F9; color:#1A1A1A; }
+  .toast-wrap,.sync-pill,.quick-bar{ display:none!important; }
+}
+
+/* ==========================================================================
+   v2 — PRIMA PER CAP DE SETMANA TREBALLAT SENCER
+   150 € per cada dissabte+diumenge treballats de veritat, cobrats a l'any
+   següent. Qualsevol absència en un dels dos dies el deixa fora.
+   ========================================================================== */
+.caps-bar{
+  display:flex; align-items:center; gap:12px;
+  margin:0 12px 8px; padding:12px 14px;
+  border-radius:var(--r); cursor:pointer;
+  background:linear-gradient(135deg,#1B5E20,#2E7D32);
+  box-shadow:0 3px 14px rgba(27,94,32,.35);
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .14s var(--spring), box-shadow .14s;
+}
+.caps-bar:active{ transform:scale(.98); }
+.caps-bar.buit{
+  background:linear-gradient(135deg,#546E7A,#37474F);
+  box-shadow:0 3px 14px rgba(55,71,79,.28);
+}
+.caps-ic{ font-size:26px; flex-shrink:0; line-height:1; }
+.caps-txt{ flex:1; min-width:0; }
+.caps-title{ font-size:11px; font-weight:800; color:rgba(255,255,255,.82);
+  text-transform:uppercase; letter-spacing:.5px; }
+.caps-sub{ font-size:11.5px; font-weight:600; color:rgba(255,255,255,.95); margin-top:3px; }
+.caps-amount{ display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0; }
+.caps-eur{ font-size:23px; font-weight:900; color:#fff; line-height:1; }
+.caps-when{ font-size:9px; font-weight:700; color:rgba(255,255,255,.75); margin-top:3px; }
+.caps-chev{ color:rgba(255,255,255,.6); font-size:16px; flex-shrink:0; }
+
+/* Full de detall */
+.caps-empty{ padding:18px 20px; font-size:12.5px; color:var(--txt2); line-height:1.6; text-align:center; }
+.caps-mes{
+  font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.7px;
+  color:var(--txt2); padding:14px 20px 5px;
+}
+.caps-row{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:9px 20px; border-bottom:1px solid var(--sur-3); font-size:13px;
+}
+.caps-dates{ font-weight:700; color:var(--txt); }
+.caps-eur-row{ font-weight:900; color:var(--green); font-size:13px; }
+.caps-total{
+  display:flex; align-items:center; justify-content:space-between;
+  margin:16px 16px 0; padding:14px 16px; border-radius:12px;
+  background:linear-gradient(135deg,#1B5E20,#2E7D32); color:#fff;
+}
+.caps-total span{ font-size:12px; font-weight:700; opacity:.9; }
+.caps-total b{ font-size:22px; font-weight:900; }
+
+/* Xip a la barra d'extres i a la vista anual */
+.xchip.caps-chip{ border-color:var(--ve); }
+.doc-foot{ grid-template-columns:repeat(6,1fr); }
+@media (max-width:560px){ .doc-foot{ grid-template-columns:repeat(3,1fr); } }
+@media print{ .doc-foot{ grid-template-columns:repeat(6,1fr)!important; } }
+
+/* ==========================================================================
+   v2 — AVÍS DE FALLADA DINS DE LA GRAELLA
+   Si el servidor no contesta, la graella deixa de ser un esquelet infinit i
+   passa a dir què passa i com tornar-ho a provar.
+   ========================================================================== */
+.fallada{
+  grid-column:1/-1; display:flex; flex-direction:column; align-items:center;
+  gap:14px; padding:30px 20px; text-align:center;
+}
+.fallada p{
+  font-size:13.5px; font-weight:600; color:var(--txt2);
+  line-height:1.55; max-width:34ch; margin:0;
+}
+.btn-reintent{
+  background:linear-gradient(135deg,var(--blue),#0D47A1); color:#fff;
+  border:none; border-radius:12px; padding:11px 22px;
+  font-size:13.5px; font-weight:800; cursor:pointer; font-family:inherit;
+  box-shadow:0 3px 12px rgba(21,101,192,.35);
+  -webkit-tap-highlight-color:transparent; transition:transform .12s var(--spring);
+}
+.btn-reintent:active{ transform:scale(.95); }
+
+/* ==========================================================================
+   v2 — MARCA DE CAP DE SETMANA (CS)
+   Un sombrejat que es dibuixa PER SOBRE del dia, sense substituir-ne el color
+   ni tocar-ne les hores. Serveix només per comptar la prima de 150 €.
+   La trama diagonal es distingeix d'un color pla encara que el dia ja estigui
+   pintat de blau, verd o rosa.
+   ========================================================================== */
+:root{ --cs:#F50057; --cs-d:#C51162; --cs-bg:#FCE4EC; }
+:root[data-theme="dark"]{ --cs:#FF5C8A; --cs-d:#FF8FB0; --cs-bg:#2E1520; }
+
+/* Mitja cel·la: una diagonal parteix el dia en dos triangles i només se
+   n'ombreja el de baix a l'esquerra. La franja de dalt (LLIC, FO/DES…) i el
+   punt d'avui queden lliures. */
+.day-cell .cs-wash{
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+  border-radius:inherit;
+  background:
+    /* la ratlla diagonal */
+    linear-gradient(to top right,
+      transparent calc(50% - 1.3px),
+      rgba(197,17,98,.95) calc(50% - 1.3px) calc(50% + 1.3px),
+      transparent calc(50% + 1.3px)),
+    /* el triangle inferior esquerre */
+    linear-gradient(to top right, rgba(245,0,87,.62) 0 50%, transparent 50%);
+}
+/* El número i les icones han de quedar per damunt del sombrejat */
+.day-cell.has-cs > span,
+.day-cell.has-cs .ev-icon,
+.day-cell.has-cs .ev-lbl{ position:relative; z-index:1; }
+/* Punt de la llegenda, amb la mateixa forma de mig quadrat */
+.leg-dot.dot-cs{
+  background:linear-gradient(to top right, var(--cs) 0 50%, transparent 50%);
+  box-shadow:inset 0 0 0 1px var(--cs);
+}
+
+.ev-card.cs{ border-color:var(--cs); background:var(--cs-bg); }
+.leg.lc-cs{ color:var(--cs-d); }
+.t-cs{ background:linear-gradient(135deg,#FF4081,var(--cs-d)); }
+
+/* Vista anual i impressió: la mateixa mitja cel·la, a escala petita.
+   Es pinta com a background-image i no com a ::after perquè el número del dia
+   quedi per damunt; els colors de fons dels mini-dies són plans, així que
+   substituir només la imatge no en canvia el color. */
+.md.hcs{
+  background-image:linear-gradient(to top right,
+    rgba(245,0,87,.75) 0 50%, transparent 50%)!important;
+}
+
+/* Full de detall: com s'està comptant i com passar a marcar-ho a mà */
+.caps-mode{
+  font-size:12.5px; line-height:1.55; color:var(--txt2);
+  padding:14px 20px 0;
+}
+.caps-mode b{ color:var(--txt); font-weight:700; }
+.btn-marcar-caps{
+  display:block; width:calc(100% - 40px); margin:14px 20px 4px;
+  padding:12px 16px; border:none; border-radius:12px;
+  background:linear-gradient(135deg,#FF4081,var(--cs-d)); color:#fff;
+  font-size:13.5px; font-weight:800; cursor:pointer; font-family:inherit;
+  box-shadow:0 3px 12px rgba(197,17,98,.32);
+  -webkit-tap-highlight-color:transparent; transition:transform .12s var(--spring);
+}
+.btn-marcar-caps:active{ transform:scale(.97); }
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="app-header">
+  <div class="hdr-left">
+    <img src="https://www.ccoo.cat/fsc/wp-content/uploads/sites/163/2022/02/cropped-logo-fsc.png" class="app-logo" alt="CCOO FSC" onerror="this.style.display='none'">
+    <div>
+      <div class="app-title">Gestió Torns</div>
+      <div class="app-sub">Agenda Laboral</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncTxt">Sincronitzant</span></div>
+    <button class="btn-hdr btn-theme" id="btnTema" onclick="ciclarTema()" aria-label="Canviar el tema">🌗</button>
+    <button class="btn-hdr" onclick="abrirVistaAnual()">
+      <svg width="14" height="14" viewBox="0 0 24 24"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>
+      Anual
+    </button>
+  </div>
+</div>
+
+<!-- RESUM COMPACTE (sempre visible; toca per desplegar el detall) -->
+<div class="stats-strip" id="statsStrip" role="button" aria-expanded="false" onclick="toggleStats()">
+  <div class="ss-ring" id="ssRing"><span id="ssRingTxt">–%</span></div>
+  <div class="ss-txt">
+    <div class="ss-main">Pla <b id="ssPlan" class="ss-blue">…</b> · Fet <b id="ssReal" class="ss-green">…</b></div>
+    <div class="ss-track">
+      <div class="ss-fill" id="ssFillPlan"></div>
+      <div class="ss-fill ss-fill-r" id="ssFillReal"></div>
+    </div>
+  </div>
+  <button class="ss-cal" aria-label="Canviar de calendari" onclick="event.stopPropagation();toggleDropdown()">📅</button>
+  <div class="ss-chev" id="ssChev">▾</div>
+</div>
+
+<!-- PANELL D'ESTADÍSTIQUES (plegable) -->
+<div id="statsPanel" class="stats-panel">
+
+<!-- DASHBOARD -->
+<div class="dashboard">
+  <div class="dash-l">
+    <div class="dash-stat">
+      <div class="ds-label">Hores conveni</div>
+      <input type="number" id="targetHours" class="obj-input" value="1519" onchange="guardarObjetivo()">
+    </div>
+    <div class="dash-stat">
+      <div class="ds-label">Planificat</div>
+      <div class="ds-val blue" id="hours-plan">…</div>
+    </div>
+    <div class="dash-stat">
+      <div class="ds-label">Diferència</div>
+      <div class="ds-val" id="hours-diff" style="font-size:15px;color:#ccc">…</div>
+    </div>
+  </div>
+  <div class="dash-c">
+    <div class="ring-wrap">
+      <svg class="ring-svg" viewBox="0 0 72 72">
+        <circle class="rb" cx="36" cy="36" r="30"/>
+        <circle class="rp" id="ringPlan" cx="36" cy="36" r="30" stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
+        <circle class="rr" id="ringReal" cx="36" cy="36" r="25" stroke-dasharray="157.1" stroke-dashoffset="157.1"/>
+      </svg>
+      <div class="ring-txt">
+        <div class="ring-pct" id="ringPct">0%</div>
+        <div class="ring-lbl">real</div>
+      </div>
+    </div>
+    <button class="acc-btn" onclick="toggleDropdown()">
+      <span id="current-email" class="acc-name">Carregant…</span>
+      <span class="acc-hint">▼ Calendari</span>
+    </button>
+  </div>
+  <div class="dash-r">
+    <div class="dash-stat" style="align-items:flex-end">
+      <div class="ds-label">Realitzat</div>
+      <div class="ds-val green" id="hours-real">…</div>
+    </div>
+    <div class="dash-stat" style="align-items:flex-end">
+      <div class="ds-label">Compliment</div>
+      <div class="ds-val" id="pct-done" style="color:#888">…%</div>
+    </div>
+  </div>
+</div>
+
+<!-- PROGRESS BARS -->
+<div class="prog-wrap">
+  <div class="prog-row">
+    <span class="prog-lbl">☀️ Planificat</span>
+    <span class="prog-pct" id="pbPlanPct" style="color:var(--blue)">0%</span>
+  </div>
+  <div class="prog-track"><div class="prog-fill" id="pbPlan" style="width:0%"></div></div>
+  <div class="prog-row" style="margin-top:5px">
+    <span class="prog-lbl">✅ Realitzat</span>
+    <span class="prog-pct" id="pbRealPct" style="color:var(--green)">0%</span>
+  </div>
+  <div class="prog-track"><div class="prog-fill prog-fill-r" id="pbReal" style="width:0%"></div></div>
+</div>
+
+<!-- EXTRAS BAR -->
+<div class="extras-bar">
+  <div class="xchip fodes-chip">
+    <span class="xchip-icon">💰</span>
+    <span class="xchip-val" id="xFodes">0 FO/DES</span>
+    <span class="xchip-money" id="xMonto">· 0€</span>
+  </div>
+  <div class="xchip fc-chip">
+    <span class="xchip-icon">📆</span>
+    <span class="xchip-val" id="xFC">0 FC</span>
+  </div>
+  <div class="xchip llic-chip">
+    <span class="xchip-icon">📋</span>
+    <span class="xchip-val" id="xLlic">0 LLIC</span>
+  </div>
+  <div class="xchip baixa-chip">
+    <span class="xchip-icon">🏥</span>
+    <span class="xchip-val" id="xBaixa">0 BAIXA</span>
+  </div>
+  <div class="xchip caps-chip">
+    <span class="xchip-icon">💶</span>
+    <span class="xchip-val" id="xCaps">0 caps setm.</span>
+    <span class="xchip-money" id="xCapsEur">· 0€</span>
+  </div>
+</div>
+
+<!-- PRIMA PER CAP DE SETMANA TREBALLAT SENCER -->
+<div class="caps-bar" id="capsBar" role="button" tabindex="0" onclick="mostrarCaps()">
+  <div class="caps-ic">💶</div>
+  <div class="caps-txt">
+    <div class="caps-title">Caps de setmana <b id="capsAny">—</b> · es cobren el <b id="capsAnyCobr">—</b></div>
+    <div class="caps-sub" id="capsSub">—</div>
+  </div>
+  <div class="caps-amount">
+    <div class="caps-eur" id="capsEur">0€</div>
+    <div class="caps-when"><span id="capsN">0</span> complets</div>
+  </div>
+  <div class="caps-chev">›</div>
+</div>
+
+<!-- BOLSA DE DIES -->
+<div class="bolsa-section">
+  <div class="bolsa-hdr">
+    <span class="bolsa-title">🗂️ Bolsa de Dies</span>
+    <button class="btn-edit-bolsa" onclick="abrirModalBolsa()">✏️ Editar</button>
+  </div>
+  <div class="bolsa-cards">
+    <div class="bolsa-card bc-ve">
+      <div class="bc-name">🌿 VE</div>
+      <div class="bc-remaining" id="bc-ve-rem" style="color:var(--ve)">—</div>
+      <div class="bc-rem-lbl">disponibles</div>
+      <div class="bc-track"><div class="bc-fill" id="bc-ve-fill" style="background:var(--ve);width:0%"></div></div>
+      <div class="bc-used" id="bc-ve-used">— / — usats</div>
+    </div>
+    <div class="bolsa-card bc-apch">
+      <div class="bc-name">🗓️ AP·CH</div>
+      <div class="bc-remaining" id="bc-apch-rem" style="color:var(--apch)">—</div>
+      <div class="bc-rem-lbl">disponibles</div>
+      <div class="bc-track"><div class="bc-fill" id="bc-apch-fill" style="background:var(--apch);width:0%"></div></div>
+      <div class="bc-used" id="bc-apch-used">— / — usats</div>
+    </div>
+    <div class="bolsa-card bc-va">
+      <div class="bc-name">🏅 VA</div>
+      <div class="bc-remaining" id="bc-va-rem" style="color:var(--va)">—</div>
+      <div class="bc-rem-lbl">disponibles</div>
+      <div class="bc-track"><div class="bc-fill" id="bc-va-fill" style="background:var(--va);width:0%"></div></div>
+      <div class="bc-used" id="bc-va-used">— / — usats</div>
+    </div>
+    <div class="bolsa-card bc-ebep">
+      <div class="bc-name">💼 EBEP</div>
+      <div class="bc-remaining" id="bc-ebep-rem" style="color:var(--ebep)">—</div>
+      <div class="bc-rem-lbl">disponibles</div>
+      <div class="bc-track"><div class="bc-fill" id="bc-ebep-fill" style="background:var(--ebep);width:0%"></div></div>
+      <div class="bc-used" id="bc-ebep-used">— / — usats</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /statsPanel -->
+
+<!-- CALENDAR -->
+<div class="cal-card">
+  <div class="cal-nav">
+    <button class="nav-arr" aria-label="Mes anterior" onclick="cambiarMes(-1)">‹</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="mesAnioLabel" class="month-label">…</span>
+      <button id="btnAvui" class="btn-avui" onclick="irAvui()">Avui</button>
+    </div>
+    <button class="nav-arr" aria-label="Mes següent" onclick="cambiarMes(1)">›</button>
+  </div>
+  <div class="day-heads">
+    <div class="dh">Lu</div><div class="dh">Ma</div><div class="dh">Mi</div>
+    <div class="dh">Ju</div><div class="dh">Vi</div>
+    <div class="dh we">Sa</div><div class="dh we">Do</div>
+  </div>
+  <div id="calGrid" class="cal-grid"></div>
+</div>
+
+<!-- SELECCIÓ RÀPIDA (només visible en mode selecció) -->
+<div id="quickBar" class="quick-bar">
+  <button class="qbtn" onclick="selRapida('all')">Tot el mes</button>
+  <button class="qbtn" onclick="selRapida('week')">Dl–Dv</button>
+  <button class="qbtn" onclick="selRapida('we')">Caps de setmana</button>
+  <button class="qbtn" onclick="selRapida('free')">Dies lliures</button>
+  <button class="qbtn" onclick="selRapida('none')">Cap</button>
+  <span class="qbtn q-hint">o arrossega el dit pel calendari</span>
+</div>
+
+<!-- LEGEND BAR -->
+<div class="legend-bar">
+  <div class="leg lc-mati" id="leg-mati" onclick="toggleModo('MATI')"><div class="leg-dot" style="background:var(--mati)"></div>Matí</div>
+  <div class="leg lc-comp" id="leg-comp" onclick="toggleModo('COMPLETO')"><div class="leg-dot" style="background:var(--comp)"></div>Compl.</div>
+  <div class="leg lc-esp"  id="leg-esp"  onclick="prepararEspecial()"><div class="leg-dot" style="background:var(--esp)"></div>Espec.</div>
+  <div class="leg lc-llic" id="leg-llic" onclick="toggleModo('LLIC')"><div class="leg-dot" style="background:var(--llic)"></div>LLIC</div>
+  <div class="leg lc-bxa"  id="leg-bxa"  onclick="toggleModo('BAIXA')"><div class="leg-dot" style="background:var(--bxa-d)"></div>BAIXA</div>
+  <div class="leg lc-ve"   id="leg-ve"   onclick="toggleModo('VE')"><div class="leg-dot" style="background:var(--ve)"></div>VE</div>
+  <div class="leg lc-apch" id="leg-apch" onclick="toggleModo('APCH')"><div class="leg-dot" style="background:var(--apch)"></div>AP·CH</div>
+  <div class="leg lc-va"   id="leg-va"   onclick="toggleModo('VA')"><div class="leg-dot" style="background:var(--va)"></div>VA</div>
+  <div class="leg lc-ebep" id="leg-ebep" onclick="toggleModo('EBEP')"><div class="leg-dot" style="background:var(--ebep)"></div>EBEP</div>
+  <div class="leg lc-fc"   id="leg-fc"   onclick="toggleModo('FC')"><div class="leg-dot" style="background:var(--vac)"></div>FC</div>
+  <div class="leg lc-fs"   id="leg-fs"   onclick="toggleModo('FS')"><div class="leg-dot" style="background:var(--fs)"></div>FS</div>
+  <div class="leg lc-fo"   id="leg-fo"   onclick="toggleModo('FO')"><div class="leg-dot" style="background:var(--fo)"></div>FO</div>
+  <div class="leg lc-fod"  id="leg-fod"  onclick="toggleModo('FODES')"><div class="leg-dot" style="background:var(--fod)"></div>FO/DES</div>
+  <div class="leg lc-cs"  id="leg-cs"  onclick="toggleModo('CS')"><div class="leg-dot dot-cs"></div>CS 150€</div>
+<div class="leg lc-bor"  id="leg-bor"  onclick="toggleModo('BORRAR')"><div class="leg-dot" style="background:var(--fest)"></div>Borrar</div>
+  <div class="leg lc-fes"><div class="leg-dot" style="background:#EF5350"></div>Festiu✶</div>
+</div>
+
+<!-- INFO PANEL -->
+<div class="info-panel" style="margin-top:8px">
+  <div class="info-hdr">
+    <span id="infoTitle" class="info-title">Selecciona un dia</span>
+    <span id="infoBadge" class="info-badge">0</span>
+  </div>
+  <div class="info-body" id="infoBody">
+    <div class="info-empty">Toca un dia per veure els detalls</div>
+  </div>
+</div>
+
+<!-- AVISOS (toast) -->
+<div id="toastWrap" class="toast-wrap" role="status" aria-live="polite"></div>
+
+<!-- CONFIRMACIÓ EN LÍNIA (substitueix confirm()/alert() del navegador) -->
+<div id="confirmOv" class="sheet-ov" onclick="cerrarConfirm(event)">
+  <div class="btm-sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title">Confirmes?</div>
+    <div class="confirm-sheet">
+      <div class="confirm-txt" id="cfTxt"></div>
+      <div class="confirm-row">
+        <button class="cf-no" onclick="cerrarConfirm()">Cancel·lar</button>
+        <button class="cf-yes" id="cfYes" onclick="acceptarConfirm()">Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETALL DE LA PRIMA PER CAP DE SETMANA -->
+<div id="capsSheetOv" class="sheet-ov" onclick="cerrarCapsSheet(event)">
+  <div class="btm-sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title" id="capsSheetTitle">💶 Caps de setmana</div>
+    <div id="capsList"></div>
+  </div>
+</div>
+
+<!-- TOOLBAR: 2 ROWS -->
+<div class="toolbar">
+  <div class="status-bar">
+    <span id="modoTxt" class="status-txt">Selecciona un mode o toca un dia</span>
+    <span id="selBadge" class="sel-badge">0</span>
+    <button id="btnDesarSel" class="btn-sel-save" onclick="guardarCambios(modo)">✓ Desar</button>
+    <button id="btnCancelSel" class="btn-sel-cancel" aria-label="Cancel·lar mode" onclick="desactivar()">✕</button>
+  </div>
+  <!-- Row 1: Torns + accions principals -->
+  <div class="btn-row">
+    <button id="btn-cfg" class="tbtn t-cfg" onclick="abrirConfig()">
+      <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.58 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+      <span class="tlbl">Config</span>
+    </button>
+    <button id="btn-mat" class="tbtn t-mat" onclick="toggleModo('MATI')">
+      <svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 9c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.93c.39-.39.39-1.02 0-1.41-.39-.39-1.02-.39-1.41 0l-1.42 1.42c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.42-1.42zm13.31 13.31c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.42-1.42c.39-.39.39-1.02 0-1.41-.39-.39-1.02-.39-1.41 0l-1.42 1.42zM4.93 19.07c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41l-1.42-1.42c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l1.42 1.42zm13.31-13.31c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41l1.42 1.42c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41l-1.42-1.42z"/></svg>
+      <span class="tlbl">Matí</span>
+    </button>
+    <button id="btn-com" class="tbtn t-com" onclick="toggleModo('COMPLETO')">
+      <svg viewBox="0 0 24 24"><path d="M10 2c-1.82 0-3.53.5-5 1.35C7.99 5.08 10 8.3 10 12s-2.01 6.92-5 8.65C6.47 21.5 8.18 22 10 22c5.52 0 10-4.48 10-10S15.52 2 10 2z"/></svg>
+      <span class="tlbl">Compl.</span>
+    </button>
+    <button id="btn-esp" class="tbtn t-esp" onclick="prepararEspecial()">
+      <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/><path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+      <span class="tlbl">Espec.</span>
+    </button>
+    <button id="btn-bor" class="tbtn t-bor" onclick="toggleModo('BORRAR')">
+      <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      <span class="tlbl">Borrar</span>
+    </button>
+    <button id="btn-prt" class="tbtn t-prt" onclick="abrirVistaAnual()">
+      <svg viewBox="0 0 24 24"><path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-4h8v2zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z"/><circle cx="18" cy="11.5" r="1"/></svg>
+      <span class="tlbl">Anual</span>
+    </button>
+  </div>
+  <div class="row-divider"></div>
+  <!-- Row 2: Incidències + Bolsa + Dies especials (scrollable) -->
+  <div class="btn-row-2">
+    <button id="btn-llic" class="tbtn t-llic" onclick="toggleModo('LLIC')">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+      <span class="tlbl">LLIC</span>
+    </button>
+    <button id="btn-bxa" class="tbtn t-bxa" onclick="toggleModo('BAIXA')">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+      <span class="tlbl">BAIXA</span>
+    </button>
+    <button id="btn-ve" class="tbtn t-ve" onclick="toggleModo('VE')">
+      <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+      <span class="tlbl">VE</span>
+    </button>
+    <button id="btn-apch" class="tbtn t-apch" onclick="toggleModo('APCH')">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+      <span class="tlbl">AP·CH</span>
+    </button>
+    <button id="btn-va" class="tbtn t-va" onclick="toggleModo('VA')">
+      <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+      <span class="tlbl">VA</span>
+    </button>
+    <button id="btn-ebep" class="tbtn t-ebep" onclick="toggleModo('EBEP')">
+      <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.86.18-1 0-2.21-1.79-4-4-4s-4 1.79-4 4c0 .14.11.56.18 1H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-3c1.1 0 2 .9 2 2 0 .14-.11.56-.18 1h-3.64c-.07-.44-.18-.86-.18-1 0-1.1.9-2 2-2zm6 17H8V8h12v12z"/></svg>
+      <span class="tlbl">EBEP</span>
+    </button>
+    <button id="btn-fc" class="tbtn t-vac" onclick="toggleModo('FC')">
+      <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+      <span class="tlbl">FC</span>
+    </button>
+    <button id="btn-fs" class="tbtn t-fs" onclick="toggleModo('FS')">
+      <svg viewBox="0 0 24 24"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>
+      <span class="tlbl">FS</span>
+    </button>
+    <button id="btn-fo" class="tbtn t-fo" onclick="toggleModo('FO')">
+      <svg viewBox="0 0 24 24"><path d="M11.5 2C6.81 2 3 5.81 3 10.5S6.81 19 11.5 19h.5v3c4.86-2.34 8-7 8-11.5C20 5.81 16.19 2 11.5 2zm1 14.5h-2v-2h2v2zm0-4h-2c0-3.25 3-3 3-5 0-1.1-.9-2-2-2s-2 .9-2 2h-2c0-2.21 1.79-4 4-4s4 1.79 4 4c0 2.5-3 2.75-3 5z"/></svg>
+      <span class="tlbl">FO</span>
+    </button>
+    <button id="btn-cs" class="tbtn t-cs" onclick="toggleModo('CS')" title="Marcar cap de setmana per als 150€">
+      <svg viewBox="0 0 24 24"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 0 0-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 0 0 0-1.41z"/></svg>
+      <span class="tlbl">CS</span>
+    </button>
+    <button id="btn-fod" class="tbtn t-fod" onclick="toggleModo('FODES')">
+      <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+      <span class="tlbl">FO/DES</span>
+    </button>
+  </div>
+</div>
+
+<!-- CALENDAR DROPDOWN -->
+<div id="calDropOv" class="sheet-ov" onclick="cerrarDropdown(event)">
+  <div class="btm-sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title">Selecciona Calendari</div>
+    <div id="calList"></div>
+    <a id="switchLink" href="#" target="_top" class="sh-action">
+      <span style="font-size:22px">🔁</span>Canviar / Afegir Compte Google
+    </a>
+  </div>
+</div>
+
+<!-- EDIT EVENT TYPE SHEET -->
+<div id="editSheetOv" class="sheet-ov" onclick="cerrarEditSheet(event)">
+  <div class="btm-sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-title" id="editSheetTitle">✏️ Canviar tipus</div>
+    <div id="editTypeList"></div>
+  </div>
+</div>
+
+<!-- MODAL CONFIG -->
+<div id="modalConfig" class="modal-ov" onclick="closeOnBg(event,'modalConfig')">
+  <div class="modal-sheet">
+    <div class="mod-drag"></div>
+    <div class="mod-title">⚙️ Configuració<button class="mod-close" onclick="cerrarModals()">✕</button></div>
+    <div class="mod-body">
+      <div class="sec-label">Horaris de Torn</div>
+      <div class="form-g">
+        <label class="form-lbl">☀️ Torn Matí</label>
+        <div class="time-row">
+          <input type="time" id="cfgMatiIni" class="form-in">
+          <span class="time-sep">→</span>
+          <input type="time" id="cfgMatiFin" class="form-in">
+        </div>
+      </div>
+      <div class="form-g">
+        <label class="form-lbl">🌙 Torn Complet</label>
+        <div class="time-row">
+          <input type="time" id="cfgCompIni" class="form-in">
+          <span class="time-sep">→</span>
+          <input type="time" id="cfgCompFin" class="form-in">
+        </div>
+      </div>
+      <div class="sec-label" style="margin-top:22px">Gestió de Festius</div>
+      <div class="form-g">
+        <label class="form-lbl">Any a editar</label>
+        <div class="anio-row">
+          <select id="selAnioFestivos" class="form-in" onchange="cargarFestivosEditor()"></select>
+          <button class="btn-sync" onclick="sincronizarFestivosWeb()" title="Importar festius oficials">
+            <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:white"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="fes-toolbar">
+        <button class="btn-add-fes" onclick="agregarInputFestivo('','')">+ Afegir Festiu</button>
+      </div>
+      <div id="fesList"></div>
+      <button class="btn-save" onclick="guardarConfig()">💾 Guardar Configuració</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BOLSA -->
+<div id="modalBolsa" class="modal-ov" onclick="closeOnBg(event,'modalBolsa')">
+  <div class="modal-sheet">
+    <div class="mod-drag"></div>
+    <div class="mod-title">🗂️ Bolsa de Dies<button class="mod-close" onclick="cerrarModals()">✕</button></div>
+    <div class="mod-body">
+      <p style="font-size:12px;color:var(--txt2);margin-bottom:18px;line-height:1.5">Edita el total de dies assignats. Els usats es calculen automàticament del calendari.</p>
+      <div class="sec-label">🌿 Vacances d'Estiu (VE)</div>
+      <div class="form-g">
+        <label class="form-lbl">Dies totals assignats</label>
+        <input type="number" id="bVE" class="form-in" min="0" max="365" value="19">
+      </div>
+      <div class="sec-label" style="margin-top:16px">🗓️ Assumptes Personals + Comp. (AP/CH)</div>
+      <div class="form-g">
+        <label class="form-lbl">Dies totals assignats</label>
+        <input type="number" id="bAPCH" class="form-in" min="0" max="365" value="7">
+      </div>
+      <div class="sec-label" style="margin-top:16px">🏅 Vacances per Antiguitat (VA)</div>
+      <div class="form-g">
+        <label class="form-lbl">Dies totals assignats</label>
+        <input type="number" id="bVA" class="form-in" min="0" max="365" value="2">
+      </div>
+      <div class="sec-label" style="margin-top:16px">💼 EBEP</div>
+      <div class="form-g">
+        <label class="form-lbl">Dies totals assignats</label>
+        <input type="number" id="bEBEP" class="form-in" min="0" max="365" value="0">
+      </div>
+      <button class="btn-save" onclick="guardarBolsas()">💾 Guardar Bolsa</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ESPECIAL -->
+<div id="modalEsp" class="modal-ov" onclick="closeOnBg(event,'modalEsp')">
+  <div class="modal-sheet">
+    <div class="mod-drag"></div>
+    <div class="mod-title">⏰ Horari Especial<button class="mod-close" onclick="cerrarModals()">✕</button></div>
+    <div class="mod-body">
+      <div class="form-g"><label class="form-lbl">Hora d'inici</label><input type="time" id="espIni" class="form-in"></div>
+      <div class="form-g"><label class="form-lbl">Hora de fi</label><input type="time" id="espFin" class="form-in"></div>
+      <button class="btn-save purple" onclick="activarModoEspecial()">✓ Seleccionar Dies</button>
+    </div>
+  </div>
+</div>
+
+<!-- YEAR VIEW -->
+<div id="yearView">
+  <div class="year-hdr">
+    <button class="btn-back" onclick="cerrarVistaAnual()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Tornar
+    </button>
+    <select id="selAnioVista" onchange="cargarVistaAnual()"></select>
+    <button class="btn-print" onclick="window.print()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="white"><path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-4h8v2zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z"/><circle cx="18" cy="11.5" r="1"/></svg>Imprimir
+    </button>
+  </div>
+  <div class="print-doc">
+    <div class="doc-hdr">
+      <div style="display:flex;align-items:center;gap:18px">
+        <img src="https://www.ccoo.cat/fsc/wp-content/uploads/sites/163/2022/02/cropped-logo-fsc.png" class="doc-logo" alt="CCOO FSC" onerror="this.style.display='none'">
+        <div><div class="doc-title">GESTIÓ TORNS</div><div class="doc-year" id="printYearLbl">2026</div></div>
+      </div>
+      <div id="printUser" class="doc-user">Usuari</div>
+    </div>
+    <!-- Print-only year title (replaces doc-hdr on print) -->
+    <div class="print-year-title" id="printYearTitle">2026</div>
+    <div class="doc-body">
+      <div id="yearGrid" class="year-grid">
+        <div style="grid-column:1/-1;text-align:center;padding:40px;color:#ccc">Generant calendari…</div>
+      </div>
+    </div>
+    <!-- Legend below calendar (screen + print) -->
+    <div class="year-legend">
+      <div class="yl"><div class="yl-dot" style="background:#0288D1"></div>Matí</div>
+      <div class="yl"><div class="yl-dot" style="background:#3949AB"></div>Complet</div>
+      <div class="yl"><div class="yl-dot" style="background:#7B1FA2"></div>Especial</div>
+      <div class="yl"><div class="yl-dot" style="background:#F8BBD0;border:2px solid #EC407A"></div>LLIC✶</div>
+      <div class="yl"><div class="yl-dot" style="background:#E91E63;border:2px solid #880E4F"></div>BAIXA✶</div>
+      <div class="yl"><div class="yl-dot" style="background:#388E3C"></div>VE</div>
+      <div class="yl"><div class="yl-dot" style="background:#9CCC65"></div>AP/CH</div>
+      <div class="yl"><div class="yl-dot" style="background:#6D4C41;border:2px solid #3E2723"></div>VA✶</div>
+      <div class="yl"><div class="yl-dot" style="background:#00838F;border:2px solid #006064"></div>EBEP✶</div>
+      <div class="yl"><div class="yl-dot" style="background:#00897B"></div>FC</div>
+      <div class="yl"><div class="yl-dot" style="background:#607D8B"></div>FS</div>
+      <div class="yl"><div class="yl-dot" style="background:#F4511E"></div>FO</div>
+      <div class="yl"><div class="yl-dot" style="background:#FFF9C4;border:2px solid #F9A825"></div>FO/DES✶</div>
+      <div class="yl"><div class="yl-dot" style="background:linear-gradient(to top right,#F50057 0 50%,transparent 50%);box-shadow:inset 0 0 0 1px #F50057"></div>CS 150€</div>
+      <div class="yl"><div class="yl-dot" style="background:#EF5350"></div>Festiu auto</div>
+      <div style="font-size:9px;color:#9E9E9E;align-self:center">✶ franja superior</div>
+    </div>
+    <div class="doc-foot">
+      <div class="doc-stat"><div class="doc-sv" id="pf-obj" style="color:#424242">—h</div><div class="doc-sl">H. Conveni</div></div>
+      <div class="doc-stat"><div class="doc-sv" id="pf-plan" style="color:var(--blue)">—h</div><div class="doc-sl">Planificat</div></div>
+      <div class="doc-stat"><div class="doc-sv" id="pf-diff" style="color:#888">—h</div><div class="doc-sl">Diferència</div></div>
+      <div class="doc-stat"><div class="doc-sv" id="pf-real" style="color:var(--green)">—h</div><div class="doc-sl">Realitzat</div></div>
+      <div class="doc-stat"><div class="doc-sv" id="pf-pct" style="color:#E65100">—%</div><div class="doc-sl">Compliment</div></div>
+      <div class="doc-stat"><div class="doc-sv" id="pf-caps" style="color:var(--ve-d)">—€</div><div class="doc-sl" id="pf-caps-lbl">Caps setm.</div></div>
+    </div>
+    <div class="doc-extras" style="border-top:none;padding-bottom:4px;">
+      <div class="doc-extras-title">📊 Resum dies calendaritzats</div>
+      <!-- Torns treballats -->
+      <div class="doc-extra-chip" style="border-color:var(--mati)">☀️ Matí: <b id="ymati">0</b> dies</div>
+      <div class="doc-extra-chip" style="border-color:var(--comp)">🌙 Complet: <b id="ycomplet">0</b> dies</div>
+      <div class="doc-extra-chip" id="chip-especial" style="border-color:var(--esp);display:none">⏰ Especial: <b id="yespecial">0</b> dies</div>
+      <!-- Festius -->
+      <div class="doc-extra-chip" style="border-color:var(--fs)">📅 FS: <b id="yfs">0</b> dies</div>
+      <div class="doc-extra-chip" style="border-color:var(--fo)">🔴 FO: <b id="yfo">0</b> dies</div>
+      <div class="doc-extra-chip" style="border-color:var(--fod)">💰 FO/DES: <b id="yfodes">0</b> dies · <b id="ymonto" style="color:var(--fod-d)">0€</b></div>
+      <div class="doc-extra-chip" style="border-color:var(--ve)">💶 Caps de setmana sencers: <b id="ycaps">0</b> · <b id="ycapsEur" style="color:var(--ve-d)">0€</b> <span class="chip-tot">(es cobren el <span id="ycapsAny">—</span>)</span></div>
+      <div class="doc-extra-chip" style="border-color:var(--vac)">📆 FC: <b id="yfc">0</b> dies</div>
+      <!-- Permisos / Absències -->
+      <div class="doc-extra-chip" style="border-color:var(--llic)">📋 LLIC: <b id="yllic">0</b> dies</div>
+      <div class="doc-extra-chip" style="border-color:var(--bxa-d)">🏥 BAIXA: <b id="ybaixa">0</b> dies</div>
+      <!-- Bolses (amb total) -->
+      <div class="doc-extra-chip" style="border-color:var(--ve)">🌿 VE: <b id="yve">0</b><span class="chip-tot">/<span id="yve-tot">—</span></span> dies</div>
+      <div class="doc-extra-chip" style="border-color:var(--apch)">🗓️ AP/CH: <b id="yapch">0</b><span class="chip-tot">/<span id="yapch-tot">—</span></span> dies</div>
+      <div class="doc-extra-chip" style="border-color:var(--va)">🏅 VA: <b id="yva">0</b><span class="chip-tot">/<span id="yva-tot">—</span></span> dies</div>
+      <div class="doc-extra-chip" style="border-color:var(--ebep)">💼 EBEP: <b id="yebep">0</b><span class="chip-tot">/<span id="yebep-tot">—</span></span> dies</div>
+    </div>
+    <div id="printDate" class="doc-date"></div>
+  </div>
+</div>
+
+<!-- ===== SCRIPT ===== -->
+<script>
+/* ============================================================================
+   GESTIÓ TORNS — Interfície
+   ============================================================================
+   Principi de disseny: el servidor només s'utilitza per LLEGIR un any sencer
+   i per ESCRIURE. Tot el que passa entre mig — canviar de mes, obrir la vista
+   anual, recalcular hores, comptar la bolsa — es fa amb les dades que ja són
+   a memòria, de manera que la interfície no espera mai.
+
+   Cicle de vida d'una escriptura:
+     1. Es modifica la còpia local i es repinta      → resposta immediata
+     2. Es mostra un avís amb "Desfés"
+     3. Es fa la crida al servidor en segon pla
+     4. La resposta ja porta el payload refrescat i el substitueix
+        (o, si falla, es recupera la còpia anterior)
+   ============================================================================ */
+
+/* ===================== ESTAT ===================== */
+var MESOS     = ["Gener","Febrer","Març","Abril","Maig","Juny","Juliol","Agost","Setembre","Octubre","Novembre","Desembre"];
+var DIES_CURT = ['dg.','dl.','dt.','dc.','dj.','dv.','ds.'];
+
+var now   = new Date();
+var mesV  = now.getMonth(), anioV = now.getFullYear();
+
+var ANYS  = {};      // anio → payload del servidor (dades pures)
+var DERIV = {};      // anio → dades derivades en local (índex, comptadors, hores)
+var PARCIAL = null;  // {anio, mes, byDay} — només el mes visible, mentre arriba l'any
+
+var calId = null, cals = [], urlApp = '';
+var modo  = null, sel = new Set();
+var diaObert = null;                              // dia visible al panell d'info
+
+var cfgMati = { ini:'08:30', fin:'15:00' };
+var cfgComp = { ini:'08:30', fin:'19:00' };
+var cfgEsp  = { ini:'',      fin:''      };
+
+var bolsaTotals = { VE:19, APCH:7, VA:2, EBEP:0 };
+var bolsaUsed   = { VE:0,  APCH:0, VA:0, EBEP:0 };
+
+var pendents = 0;    // escriptures/lectures en vol
+var opSeq    = 0;    // només la resposta de l'última operació mana
+var _prevNums = {};  // valors previs per animar els comptadors
+
+/* Config per cada mode: títol, descripció, colorId de Google Calendar */
+var MODO_CFG = {
+  MATI:    function(){ return {titulo:'Trabajo (Matí)',    descripcion:'Horario: '+cfgMati.ini+' a '+cfgMati.fin, colorId:1}; },
+  COMPLETO:function(){ return {titulo:'Trabajo (Completo)',descripcion:'Horario: '+cfgComp.ini+' a '+cfgComp.fin, colorId:9}; },
+  ESPECIAL:function(){ return {titulo:'Trabajo (Especial)',descripcion:'Horario: '+cfgEsp.ini+' a '+cfgEsp.fin,   colorId:3}; },
+  LLIC:    function(){ return {titulo:'LLIC',              descripcion:'Llicència',                                colorId:5}; },
+  BAIXA:   function(){ return {titulo:'BAIXA',             descripcion:'Baixa laboral',                           colorId:4}; },
+  VE:      function(){ return {titulo:'VE',                descripcion:'Vacances d\'Estiu',                       colorId:10}; },
+  APCH:    function(){ return {titulo:'AP/CH',             descripcion:'Assumptes Personals / Compensació Horari',colorId:3}; },
+  VA:      function(){ return {titulo:'VA',                descripcion:'Vacances per Antiguitat (compta com treballat)', colorId:11}; },
+  EBEP:    function(){ return {titulo:'EBEP',              descripcion:'Vacances EBEP (compta com treballat)',    colorId:7}; },
+  FC:      function(){ return {titulo:'FC',                descripcion:'Festes Ajust Hores Conveni',              colorId:2}; },
+  FS:      function(){ return {titulo:'FS - Festiu Setmanal',  descripcion:'Festiu Setmanal',                     colorId:8}; },
+  FO:      function(){ return {titulo:'FO - Festiu Oficial',   descripcion:'Festiu Oficial',                      colorId:6}; },
+  FODES:   function(){ return {titulo:'FO/DES',                descripcion:'Festiu Oficial amb descompte (150€)', colorId:5}; },
+  // Marca visual: no porta "Horario:", per tant no suma ni resta cap hora
+  CS:      function(){ return {titulo:'CS - Cap de setmana (150€)', descripcion:'Marca per a la prima de cap de setmana. No compta hores.', colorId:4}; }
+};
+
+var TIPO_INFO = {
+  MATI:    {cls:'mati',  ic:'☀️',  label:'Matí'},
+  COMPLETO:{cls:'comp',  ic:'🌙',  label:'Complet'},
+  ESPECIAL:{cls:'esp',   ic:'⏰',  label:'Especial'},
+  LLIC:    {cls:'llic',  ic:'📋',  label:'Llicència'},
+  BAIXA:   {cls:'bxa',   ic:'🏥',  label:'Baixa'},
+  VE:      {cls:'ve',    ic:'🌿',  label:'Vacances Estiu'},
+  APCH:    {cls:'apch',  ic:'🗓️', label:'AP / CH'},
+  VA:      {cls:'va',    ic:'🏅',  label:'Vacances Antiguitat'},
+  EBEP:    {cls:'ebep',  ic:'💼',  label:'EBEP'},
+  FC:      {cls:'vac',   ic:'📆',  label:'FC - Festes Conveni'},
+  FS:      {cls:'fs',    ic:'📅',  label:'Festiu Setmanal'},
+  FO:      {cls:'fo',    ic:'🔴',  label:'Festiu Oficial'},
+  FODES:   {cls:'fodes', ic:'💰',  label:'FO/DES (+150€)'},
+  CS:      {cls:'cs',    ic:'🌸',  label:'Cap de setmana (150€)'},
+  FESTIVO: {cls:'fest',  ic:'🎉',  label:'Festiu'}
+};
+
+var TIPOS_GESTIONABLES = ['MATI','COMPLETO','ESPECIAL','LLIC','BAIXA','VE','APCH','VA','EBEP','FC','FS','FO','FODES','CS'];
+
+/* Prima per cap de setmana treballat sencer (dissabte + diumenge), que es
+   cobra l'any següent. Un dia només compta si té torn i CAP altra marca:
+   qualsevol absència (baixa, llicència, AP/CH, VE, VA, EBEP, FC, FS, FO,
+   FO/DES) deixa el cap de setmana fora de la prima. */
+var CAP_SETMANA_EUROS = 150;
+var BOLSA_TYPES        = ['VE','APCH','VA','EBEP'];
+
+/* Rèplica de les regles del servidor. Cal tenir-les aquí per poder aplicar un
+   canvi a la còpia local abans que el servidor respongui; la resposta del
+   servidor sempre acaba sent l'autoritat. */
+var GRUPS = {
+  TORN:    ['MATI','COMPLETO','ESPECIAL'],
+  OVERLAY: ['LLIC','BAIXA','VA','EBEP'],
+  NOHORES: ['FC','FS','FO','FODES','VE','APCH'],
+  MARCA:   ['CS']          // només pinta: conviu amb tot i no toca les hores
+};
+function grupoDe(tipo) {
+  for (var g in GRUPS) if (GRUPS[g].indexOf(tipo) !== -1) return g;
+  return null;
+}
+var APP_PREFIX = ['Trabajo','FS -','FO -','FO/DES','AP/CH','Vacances','CS -'];
+var APP_EXACT  = ['LLIC','BAIXA','FC','VE','VA','EBEP','CS'];
+function esEventApp(titulo) {
+  var t = String(titulo || '').trim();
+  for (var i = 0; i < APP_PREFIX.length; i++) if (t.indexOf(APP_PREFIX[i]) === 0) return true;
+  for (var j = 0; j < APP_EXACT.length; j++) {
+    if (t === APP_EXACT[j] || t.indexOf(APP_EXACT[j] + ' ') === 0) return true;
+  }
+  return false;
+}
+
+/* ===================== UTILITATS ===================== */
+function $(id) { return document.getElementById(id); }
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function vib(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e) {} }
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function pad2(n) { return n < 10 ? '0' + n : String(n); }
+function iso(a, m, d) { return a + '-' + pad2(m + 1) + '-' + pad2(d); }
+function msDeIso(s) { var p = String(s).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).getTime(); }
+function menysMoviment() {
+  try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e) { return false; }
+}
+/* 'Horario: 08:30 a 15:00' o '08:30 a 15:00' → {a:8.5, b:15} */
+function parseHorari(txt) {
+  var m = String(txt || '').match(/(\d{1,2}):(\d{2}) a (\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  return { a: +m[1] + (+m[2]) / 60, b: +m[3] + (+m[4]) / 60 };
+}
+function horariLlegible(tipo, cfg) {
+  if (grupoDe(tipo) === 'TORN') {
+    var m = String(cfg.descripcion || '').replace('Horario: ', '');
+    return m || 'Tot el dia';
+  }
+  return 'Tot el dia';
+}
+
+/* ===================== TEMA ===================== */
+function temaGuardat() {
+  try { return localStorage.getItem('GT_TEMA') || 'auto'; } catch(e) { return 'auto'; }
+}
+function resoldreTema(t) {
+  if (t === 'auto') {
+    try { return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    catch(e) { return 'light'; }
+  }
+  return t;
+}
+function aplicarTema(t) {
+  document.documentElement.setAttribute('data-theme', resoldreTema(t));
+  var b = $('btnTema');
+  if (b) {
+    b.textContent = t === 'auto' ? '🌗' : (t === 'dark' ? '🌙' : '☀️');
+    b.title = 'Tema: ' + (t === 'auto' ? 'automàtic' : t === 'dark' ? 'fosc' : 'clar');
+    b.setAttribute('aria-label', b.title);
+  }
+}
+function ciclarTema() {
+  var ordre = ['auto','light','dark'];
+  var seg   = ordre[(ordre.indexOf(temaGuardat()) + 1) % 3];
+  try { localStorage.setItem('GT_TEMA', seg); } catch(e) {}
+  aplicarTema(seg);
+  vib(8);
+  toast('Tema: ' + (seg === 'auto' ? 'automàtic' : seg === 'dark' ? 'fosc' : 'clar'), 'info', 1400);
+}
+
+/* ===================== AVISOS (toast) ===================== */
+function toast(msg, tone, ms, accio) {
+  var wrap = $('toastWrap');
+  if (!wrap) return;
+  var t = document.createElement('div');
+  t.className = 'toast' + (tone ? ' t-' + tone : '');
+  var m = document.createElement('div');
+  m.className = 'toast-msg'; m.textContent = msg;
+  t.appendChild(m);
+  if (accio) {
+    var b = document.createElement('button');
+    b.className = 'toast-btn'; b.textContent = accio.label;
+    b.onclick = function(){ treure(); accio.fn(); };
+    t.appendChild(b);
+  }
+  wrap.appendChild(t);
+  var mort = setTimeout(treure, ms || (accio ? 6000 : 2600));
+  function treure() {
+    clearTimeout(mort);
+    if (!t.parentNode) return;
+    t.classList.add('leaving');
+    setTimeout(function(){ if (t.parentNode) t.parentNode.removeChild(t); }, 200);
+  }
+  return treure;
+}
+function err(e) {
+  toast('❌ ' + (e && e.message ? e.message : e), 'err', 4500);
+}
+/* Compatibilitat amb el codi antic */
+function showStatus(msg, ms) { toast(msg, 'info', ms || 2200); }
+function showErr(e) { err(e); }
+
+/* ===================== CONFIRMACIÓ EN LÍNIA ===================== */
+var _cfFn = null;
+function confirmar(text, etiqueta, fn, segur) {
+  _cfFn = fn;
+  $('cfTxt').textContent = text;
+  var y = $('cfYes');
+  y.textContent = etiqueta;
+  y.className = 'cf-yes' + (segur ? ' safe' : '');
+  $('confirmOv').classList.add('open');
+}
+function cerrarConfirm(ev) {
+  if (!ev || ev.target === $('confirmOv')) { $('confirmOv').classList.remove('open'); _cfFn = null; }
+}
+function acceptarConfirm() {
+  var f = _cfFn;
+  $('confirmOv').classList.remove('open');
+  _cfFn = null;
+  if (f) f();
+}
+
+/* ===================== INDICADOR DE SINCRONITZACIÓ ===================== */
+function sync(delta) {
+  if (delta) pendents = Math.max(0, pendents + delta);
+  var p = $('syncPill');
+  if (!p) return;
+  p.classList.toggle('on', pendents > 0 || p.classList.contains('stale'));
+  $('syncTxt').textContent = pendents > 0 ? 'Sincronitzant' : 'Dades locals';
+}
+function marcarStale(on) {
+  var p = $('syncPill');
+  if (!p) return;
+  p.classList.toggle('stale', !!on);
+  sync(0);
+}
+
+/* ===================== CAPA DE DADES ===================== */
+function claveLocal(anio) { return 'GT_P_' + anio + '_' + (calId || 'd'); }
+
+function guardarLocal(anio) {
+  if (!ANYS[anio]) return;
+  try { localStorage.setItem(claveLocal(anio), JSON.stringify(ANYS[anio])); }
+  catch(e) { podarLocal(); }
+}
+function llegirLocal(anio) {
+  try {
+    var s = localStorage.getItem(claveLocal(anio));
+    return s ? JSON.parse(s) : null;
+  } catch(e) { return null; }
+}
+/* Si l'emmagatzematge s'omple, deixem només l'any en curs */
+function podarLocal() {
+  try {
+    for (var i = localStorage.length - 1; i >= 0; i--) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf('GT_P_') === 0 && k !== claveLocal(anioV)) localStorage.removeItem(k);
+    }
+  } catch(e) {}
+}
+
+/* Recalcula tot el que la interfície deriva de les dades brutes de l'any */
+function derivar(anio) {
+  var p = ANYS[anio];
+  if (!p) { DERIV[anio] = null; return; }
+
+  var byDay = {};
+  (p.eventos || []).forEach(function(e) {
+    var k = e.m + '_' + e.d;
+    (byDay[k] = byDay[k] || []).push({ dia:e.d, titulo:e.n, tipo:e.t, horario:e.h });
+  });
+  (p.festivos || []).forEach(function(f) {
+    var k = f.mes + '_' + f.dia;
+    (byDay[k] = byDay[k] || []).push({ dia:f.dia, titulo:f.titulo, tipo:'FESTIVO', horario:'Festiu' });
+  });
+
+  var KEY = { FODES:'fodes', FC:'fc', FS:'fs', FO:'fo', LLIC:'llic', BAIXA:'baixa',
+              VE:'ve', APCH:'apch', VA:'va', EBEP:'ebep',
+              MATI:'mati', COMPLETO:'complet', ESPECIAL:'especial' };
+  var resumen = { fodes:0, fc:0, fs:0, fo:0, llic:0, baixa:0, ve:0, apch:0,
+                  va:0, ebep:0, mati:0, complet:0, especial:0 };
+  var vistos = {};
+  (p.eventos || []).forEach(function(e) {
+    var k = e.t + '|' + e.m + '|' + e.d;
+    if (KEY[e.t] && !vistos[k]) { vistos[k] = 1; resumen[KEY[e.t]]++; }
+  });
+  resumen.fodesMonto = resumen.fodes * (p.fodesEur || 150);
+
+  /* Hores: el servidor només envia els extrems del torn, el "realitzat" es
+     calcula aquí perquè avanci amb el rellotge sense tornar-hi a preguntar. */
+  var ara  = new Date();
+  var hoy0 = new Date(ara.getFullYear(), ara.getMonth(), ara.getDate()).getTime();
+  var hAra = ara.getHours() + ara.getMinutes() / 60;
+  var plan = 0, real = 0;
+  (p.torns || []).forEach(function(t) {
+    var dur = Math.max(t.b - t.a, 0);
+    var ft  = msDeIso(t.f);
+    plan += dur;
+    if (ft < hoy0) real += dur;
+    else if (ft === hoy0 && hAra >= t.b) real += dur;
+  });
+
+  /* Caps de setmana treballats íntegrament */
+  var teTorn = {}, teAltre = {};
+  (p.eventos || []).forEach(function(e) {
+    var g = grupoDe(e.t), k = e.m + '_' + e.d;
+    if (g === 'TORN') teTorn[k] = 1;
+    else if (g === 'OVERLAY' || g === 'NOHORES') teAltre[k] = 1;   // qualsevol absència
+  });
+  var treballat = function(m, d) {
+    var k = m + '_' + d;
+    return !!teTorn[k] && !teAltre[k];
+  };
+  /* Els festius oficials automàtics tampoc són dies treballats */
+  var esFestiu = {};
+  (p.festivos || []).forEach(function(f) { esFestiu[f.mes + '_' + f.dia] = 1; });
+
+  /* Marques manuals (tipus CS). Si n'hi ha alguna a l'any, manen elles:
+     l'usuari sap millor que cap regla quins caps de setmana li paguen. Si no
+     n'hi ha cap, es fa servir la detecció automàtica, com fins ara. */
+  var marcat = {};
+  (p.eventos || []).forEach(function(e) { if (e.t === 'CS') marcat[e.m + '_' + e.d] = 1; });
+  var hiHaMarques = false;
+  for (var kk in marcat) { hiHaMarques = true; break; }
+
+  var caps = [], capsAuto = [];
+  var ds = new Date(anio, 0, 1);
+  ds.setDate(ds.getDate() + ((6 - ds.getDay() + 7) % 7));           // primer dissabte de l'any
+  while (ds.getFullYear() === anio) {
+    var dg = new Date(ds.getTime()); dg.setDate(dg.getDate() + 1);  // el diumenge següent
+    // Els parells que creuen el canvi d'any (dissabte 31/12 + diumenge 1/1) no
+    // es compten: el diumenge és a les dades de l'any següent, i barrejar-les
+    // faria que l'import canviés segons si aquell any ja s'ha carregat o no.
+    if (dg.getFullYear() === anio) {
+      var ks = ds.getMonth() + '_' + ds.getDate();
+      var kg = dg.getMonth() + '_' + dg.getDate();
+      var parell = {
+        ds:  iso(anio, ds.getMonth(), ds.getDate()),
+        dg:  iso(anio, dg.getMonth(), dg.getDate()),
+        mes: ds.getMonth()
+      };
+      var auto = treballat(ds.getMonth(), ds.getDate()) && !esFestiu[ks] &&
+                 treballat(dg.getMonth(), dg.getDate()) && !esFestiu[kg];
+      if (auto) capsAuto.push(parell);
+      if (hiHaMarques ? (marcat[ks] && marcat[kg]) : auto) caps.push(parell);
+    }
+    ds.setDate(ds.getDate() + 7);
+  }
+  resumen.caps      = caps.length;
+  resumen.capsMonto = caps.length * CAP_SETMANA_EUROS;
+
+  DERIV[anio] = { byDay: byDay, resumen: resumen, plan: plan, real: real,
+                  caps: caps, capsAuto: capsAuto, capsManual: hiHaMarques, marcat: marcat };
+
+  if (anio === anioV) {
+    bolsaTotals = p.bolsas || bolsaTotals;
+    bolsaUsed   = { VE:resumen.ve, APCH:resumen.apch, VA:resumen.va, EBEP:resumen.ebep };
+  }
+}
+
+function evsDelDia(anio, mes, dia) {
+  var d = DERIV[anio];
+  if (d) return d.byDay[mes + '_' + dia] || [];
+  if (PARCIAL && PARCIAL.anio === anio && PARCIAL.mes === mes) return PARCIAL.byDay[mes + '_' + dia] || [];
+  return [];
+}
+
+/* Pinta el mes visible amb la resposta barata de l'arrencada, mentre l'any
+   sencer encara viatja. Les estadístiques es queden en esquelet fins llavors. */
+function adoptarMes(m) {
+  if (!m) return;
+  var byDay = {};
+  (m.eventos || []).forEach(function(e) {
+    var k = e.m + '_' + e.d;
+    (byDay[k] = byDay[k] || []).push({ dia:e.d, titulo:e.n, tipo:e.t, horario:e.h });
+  });
+  (m.festivos || []).forEach(function(f) {
+    if (f.mes !== m.mes) return;
+    var k = f.mes + '_' + f.dia;
+    (byDay[k] = byDay[k] || []).push({ dia:f.dia, titulo:f.titulo, tipo:'FESTIVO', horario:'Festiu' });
+  });
+  PARCIAL = { anio: m.anio, mes: m.mes, byDay: byDay };
+  renderTot();
+}
+
+/* Substitueix les dades d'un any per les que acaba d'enviar el servidor */
+function adoptar(anio, p) {
+  if (!p) return;
+  PARCIAL = null;          // ja tenim l'any sencer
+  ANYS[anio] = p;
+  aplicarConfigServidor(p.cfg);
+  derivar(anio);
+  guardarLocal(anio);
+  if (anio === anioV) { renderTot(); if (diaObert) showInfo(diaObert); }
+}
+
+/* ===================== VIGILANT DE LES CRIDES ===================== */
+/* Cap crida es pot quedar girant en silenci: si el servidor no contesta a
+   temps, cal dir-ho i oferir tornar-ho a provar. */
+function vigilar(segons, quan) {
+  var t = setTimeout(quan, segons * 1000);
+  return function(){ clearTimeout(t); };
+}
+
+function mostrarFallada(text, reintentar) {
+  var grid = $('calGrid');
+  grid.innerHTML = '';
+  var box = document.createElement('div');
+  box.className = 'fallada';
+  var p = document.createElement('p');
+  p.textContent = text;
+  box.appendChild(p);
+  if (reintentar) {
+    var b = document.createElement('button');
+    b.className = 'btn-reintent';
+    b.textContent = '↻ Tornar-ho a provar';
+    b.onclick = function(){ pintarEsquelet(); reintentar(); };
+    box.appendChild(b);
+  }
+  grid.appendChild(box);
+}
+
+/* ===================== ARRENCADA ===================== */
+/* window.onload espera TOTS els recursos, inclosos el logotip i la tipografia
+   de Google Fonts. Amb la xarxa lenta això endarreria l'arrencada sencera
+   darrere d'una imatge decorativa; amb DOMContentLoaded no. */
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
+else iniciar();
+
+function iniciar() {
+  aplicarTema(temaGuardat());
+  cargarLocal();
+
+  try { calId = localStorage.getItem('GT_CAL') || null; } catch(e) {}
+  var nomCal = null;
+  try { nomCal = localStorage.getItem('GT_CAL_NOM'); } catch(e) {}
+  if (nomCal) $('current-email').textContent = nomCal;
+
+  /* 1) Pintat immediat amb l'últim estat conegut d'aquest dispositiu.
+        L'aplicació ja és utilitzable abans que el servidor respongui. */
+  var calent = llegirLocal(anioV);
+  if (calent) {
+    ANYS[anioV] = calent;
+    derivar(anioV);
+    renderTot();
+    marcarStale(true);
+  } else {
+    pintarEsquelet();
+  }
+
+  /* 2) Dades fresques: calendaris + any sencer en una sola crida */
+  arrancarApp();
+
+  actualizarBtnAvui();
+  try { if (localStorage.getItem('uiStats') === '1') toggleStats(true); } catch(e) {}
+
+  var sF = $('selAnioFestivos'), sV = $('selAnioVista');
+  for (var y = anioV - 1; y <= anioV + 3; y++) {
+    var o = document.createElement('option'); o.value = y; o.textContent = y;
+    sF.appendChild(o.cloneNode(true)); sV.appendChild(o);
+  }
+  sF.value = String(anioV); sV.value = String(anioV);
+
+  /* Teclat (escriptori) */
+  document.addEventListener('keydown', function(e) {
+    if (document.querySelector('.modal-ov.open') || document.querySelector('.sheet-ov.open')) {
+      if (e.key === 'Escape') { cerrarModals(); cerrarDropdown(); cerrarEditSheet(); cerrarConfirm(); }
+      return;
+    }
+    var tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+    if ($('yearView').style.display === 'block') { if (e.key === 'Escape') cerrarVistaAnual(); return; }
+    if (e.key === 'ArrowLeft')  { cambiarMes(-1); return; }
+    if (e.key === 'ArrowRight') { cambiarMes(1);  return; }
+    if (e.key === 'Escape' && modo) { desactivar(); return; }
+    if (e.key === 'Enter' && modo && sel.size) { guardarCambios(modo); return; }
+    if (e.key === 't' || e.key === 'T') irAvui();
+  });
+
+  /* Lliscar per canviar de mes (només quan no s'està seleccionant) */
+  var cc = document.querySelector('.cal-card'), tX = 0, tY = 0;
+  cc.addEventListener('touchstart', function(e) {
+    tX = e.touches[0].clientX; tY = e.touches[0].clientY;
+  }, {passive:true});
+  cc.addEventListener('touchend', function(e) {
+    if (modo) return;                                   // en mode selecció, el dit pinta
+    var dx = e.changedTouches[0].clientX - tX;
+    if (Math.abs(dx) > 48 && Math.abs(e.changedTouches[0].clientY - tY) < 55) cambiarMes(dx < 0 ? 1 : -1);
+  }, {passive:true});
+
+  muntarPintat();
+
+  /* El tema automàtic segueix el sistema en calent */
+  try {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+      if (temaGuardat() === 'auto') aplicarTema('auto');
+    });
+  } catch(e) {}
+
+  /* Les hores "realitzades" avancen soles */
+  setInterval(function() {
+    if (ANYS[anioV]) { derivar(anioV); renderStats(); }
+  }, 60000);
+}
+
+/* Fase 1: calendaris + el mes visible. Ha de ser ràpida: és el que decideix
+   quan apareix el calendari a la pantalla. */
+function arrancarApp() {
+  sync(1);
+  var atura = vigilar(40, function() {
+    sync(-1); marcarStale(true);
+    mostrarFallada('El servidor no ha contestat. Comprova la connexió i torna-ho a provar.', arrancarApp);
+  });
+  google.script.run
+    .withSuccessHandler(function(r) {
+      atura(); sync(-1);
+      urlApp = r.cals.url;
+      cals   = r.cals.calendarios || [];
+      calId  = r.calId;
+      if (!cals.length) {
+        $('current-email').textContent = 'Sense calendaris';
+        mostrarFallada("No s'ha trobat cap calendari al teu compte de Google.", arrancarApp);
+        return;
+      }
+      var cur = cals.filter(function(c){ return c.id === calId; })[0] || cals[0];
+      $('current-email').textContent = cur.nombre;
+      try {
+        localStorage.setItem('GT_CAL', calId || '');
+        localStorage.setItem('GT_CAL_NOM', cur.nombre);
+      } catch(e) {}
+      pintarLlistaCalendaris();
+      $('switchLink').href = 'https://accounts.google.com/SignOutOptions?continue=' + encodeURIComponent(urlApp);
+      if (!ANYS[anioV]) adoptarMes(r.mes);   // el calendari ja es pot fer servir
+      marcarStale(true);
+      carregarAnyFons(anioV);                // fase 2, amb la pantalla ja plena
+    })
+    .withFailureHandler(function(e) {
+      atura(); sync(-1); marcarStale(true);
+      mostrarFallada('El servidor ha donat un error: ' + (e && e.message ? e.message : e), arrancarApp);
+    })
+    .arrancar(anioV, mesV, calId);
+}
+
+/* Fase 2: l'any sencer. Va en segon pla; si triga, el calendari ja funciona. */
+function carregarAnyFons(anio) {
+  sync(1);
+  var atura = vigilar(120, function() {
+    sync(-1); marcarStale(true);
+    toast('Les dades anuals estan trigant. El calendari funciona; les estadístiques arribaran quan el servidor acabi.', 'warn', 7000);
+  });
+  google.script.run
+    .withSuccessHandler(function(p) {
+      atura(); sync(-1);
+      adoptar(anio, p);
+      marcarStale(false);
+      prefetchAny(anio + 1);
+      prefetchAny(anio - 1);
+    })
+    .withFailureHandler(function(e) {
+      atura(); sync(-1); marcarStale(true);
+      err(e);
+    })
+    .obtenerAnyComplet(anio, calId);
+}
+
+/* Els anys veïns es porten en silenci: canviar d'any també serà instantani */
+var _prefetch = {};
+function prefetchAny(anio) {
+  if (ANYS[anio] || _prefetch[anio]) return;
+  _prefetch[anio] = 1;
+  google.script.run
+    .withSuccessHandler(function(p) {
+      delete _prefetch[anio];
+      if (!ANYS[anio]) { ANYS[anio] = p; derivar(anio); guardarLocal(anio); }
+    })
+    .withFailureHandler(function(){ delete _prefetch[anio]; })
+    .obtenerAnyComplet(anio, calId);
+}
+
+function carregarAny(anio) {
+  var v = localStorage.getItem('obj_' + anio) || localStorage.getItem('obj') || '1519';
+  $('targetHours').value = v;
+
+  if (ANYS[anio]) { derivar(anio); renderTot(); prefetchAny(anio + 1); prefetchAny(anio - 1); return; }
+
+  var calent = llegirLocal(anio);
+  if (calent) { ANYS[anio] = calent; derivar(anio); renderTot(); marcarStale(true); }
+  else { pintarEsquelet(); }
+
+  carregarAnyFons(anio);
+}
+
+/* ===================== CALENDARIS ===================== */
+function pintarLlistaCalendaris() {
+  var cont = $('calList'); cont.innerHTML = '';
+  cals.forEach(function(c) {
+    var it = document.createElement('div');
+    it.className = 'cal-item' + (c.id === calId ? ' active-cal' : '');
+    it.innerHTML = '<div class="cal-icon">📅</div><div class="cal-info"><div class="cal-name">' + esc(c.nombre) +
+                   '</div><div class="cal-own">' + (c.esMio ? '✓ El teu calendari' : 'Compartit') + '</div></div>' +
+                   (c.id === calId ? '<div class="cal-chk">✓</div>' : '');
+    it.onclick = function(){ seleccionarCal(c.id, c.nombre); };
+    cont.appendChild(it);
+  });
+}
+
+function seleccionarCal(id, nom) {
+  if (id === calId) { cerrarDropdown(); return; }
+  calId = id;
+  $('current-email').textContent = nom;
+  try { localStorage.setItem('GT_CAL', id); localStorage.setItem('GT_CAL_NOM', nom); } catch(e) {}
+  ANYS = {}; DERIV = {}; _prefetch = {};
+  cerrarDropdown();
+  pintarLlistaCalendaris();
+  carregarAny(anioV);
+}
+
+function toggleDropdown() { $('calDropOv').classList.toggle('open'); }
+function cerrarDropdown(ev) {
+  if (!ev || ev.target === $('calDropOv')) $('calDropOv').classList.remove('open');
+}
+
+/* ===================== NAVEGACIÓ DE MES ===================== */
+function cambiarMes(d) {
+  var m = mesV + d, a = anioV;
+  if (m > 11) { m = 0;  a++; }
+  if (m < 0)  { m = 11; a--; }
+  setMes(a, m, d > 0 ? 'next' : 'prev');
+}
+function irAvui() {
+  var n = new Date();
+  if (n.getFullYear() === anioV && n.getMonth() === mesV) return;
+  var dir = (n.getFullYear() * 12 + n.getMonth()) > (anioV * 12 + mesV) ? 'next' : 'prev';
+  setMes(n.getFullYear(), n.getMonth(), dir);
+}
+function setMes(a, m, dir) {
+  var canviAny = a !== anioV;
+  anioV = a; mesV = m;
+  actualizarBtnAvui();
+  if (canviAny) { carregarAny(a); animarGrid(dir); }
+  else          { pintarGraella(); animarGrid(dir); }
+  $('mesAnioLabel').textContent = MESOS[mesV] + ' ' + anioV;
+  netejarInfo();
+}
+function animarGrid(dir) {
+  if (!dir || menysMoviment()) return;
+  var g = $('calGrid');
+  g.classList.remove('slide-next','slide-prev');
+  void g.offsetWidth;                       // reinicia l'animació
+  g.classList.add(dir === 'next' ? 'slide-next' : 'slide-prev');
+}
+function actualizarBtnAvui() {
+  var n = new Date();
+  $('btnAvui').style.display = (mesV === n.getMonth() && anioV === n.getFullYear()) ? 'none' : 'inline-block';
+}
+
+/* ===================== GRAELLA ===================== */
+function pintarEsquelet() {
+  $('mesAnioLabel').textContent = MESOS[mesV] + ' ' + anioV;
+  var grid = $('calGrid'); grid.innerHTML = '';
+  var primerDia = new Date(anioV, mesV, 1).getDay() || 7;
+  var diasMes   = new Date(anioV, mesV + 1, 0).getDate();
+  for (var i = 1; i < primerDia; i++) {
+    var e = document.createElement('div'); e.className = 'day-cell empty'; grid.appendChild(e);
+  }
+  for (var d = 1; d <= diasMes; d++) {
+    var c = document.createElement('div'); c.className = 'day-cell sk-cell'; grid.appendChild(c);
+  }
+  ['hours-plan','hours-real','pct-done','ssPlan','ssReal'].forEach(function(id) {
+    var el = $(id); if (el) el.classList.add('sk');
+  });
+}
+
+// Pinta la graella si hi ha dades per al mes visible; si no, l'esquelet
+function pintarGraella() {
+  if (ANYS[anioV] || (PARCIAL && PARCIAL.anio === anioV && PARCIAL.mes === mesV)) buildGrid();
+  else pintarEsquelet();
+}
+
+function renderTot() {
+  $('mesAnioLabel').textContent = MESOS[mesV] + ' ' + anioV;
+  pintarGraella();
+  // Les xifres anuals només es poden pintar amb el payload de l'any sencer
+  if (!ANYS[anioV]) return;
+  renderStats();
+  renderExtras();
+  renderCaps();
+  renderBolsas();
+}
+
+function buildGrid() {
+  var grid = $('calGrid');
+  var frag = document.createDocumentFragment();
+  var primerDia = new Date(anioV, mesV, 1).getDay() || 7;
+  var diasMes   = new Date(anioV, mesV + 1, 0).getDate();
+  var hoy = new Date();
+
+  for (var i = 1; i < primerDia; i++) {
+    var e = document.createElement('div'); e.className = 'day-cell empty'; frag.appendChild(e);
+  }
+
+  for (var dia = 1; dia <= diasMes; dia++) {
+    var cell = document.createElement('div');
+    cell.className = 'day-cell';
+    var fiso = iso(anioV, mesV, dia);
+    cell.dataset.fecha = fiso;
+    cell.dataset.dia   = dia;
+    cell.setAttribute('role', 'button');
+
+    var dow = new Date(anioV, mesV, dia).getDay();
+    if (dow === 0 || dow === 6) cell.classList.add('weekend-day');
+    if (dia === hoy.getDate() && mesV === hoy.getMonth() && anioV === hoy.getFullYear()) cell.classList.add('today');
+
+    var numSpan = document.createElement('span'); numSpan.textContent = dia; cell.appendChild(numSpan);
+
+    var evsDia  = evsDelDia(anioV, mesV, dia);
+    var torn    = evsDia.filter(function(ev){ return ev.tipo==='MATI'||ev.tipo==='COMPLETO'||ev.tipo==='ESPECIAL'; })[0];
+    var overlay = evsDia.filter(function(ev){ return ev.tipo==='LLIC'||ev.tipo==='BAIXA'||ev.tipo==='VA'||ev.tipo==='EBEP'; })[0];
+    var fodes   = evsDia.filter(function(ev){ return ev.tipo==='FODES'; })[0];
+    var noHores = evsDia.filter(function(ev){ return ev.tipo==='FC'||ev.tipo==='FS'||ev.tipo==='FO'||ev.tipo==='VE'||ev.tipo==='APCH'; })[0];
+    var fest    = evsDia.filter(function(ev){ return ev.tipo==='FESTIVO'; })[0];
+
+    /* 1. Color de fons (prioritat: torn > overlay > sense hores > festiu).
+          FO/DES no pinta mai el fons: sempre es mostra com a franja superior. */
+    if (torn) {
+      cell.classList.add(torn.tipo === 'MATI' ? 'cell-mati' : torn.tipo === 'COMPLETO' ? 'cell-comp' : 'cell-esp');
+      addCellIcon(cell, TIPO_INFO[torn.tipo].ic, torn.titulo);
+    } else if (overlay) {
+      cell.classList.add(overlay.tipo === 'LLIC' ? 'cell-llic' : overlay.tipo === 'BAIXA' ? 'cell-bxa'
+                       : overlay.tipo === 'VA'   ? 'cell-va'   : 'cell-ebep');
+      addCellIcon(cell, TIPO_INFO[overlay.tipo].ic, overlay.titulo);
+    } else if (noHores) {
+      cell.classList.add(noHores.tipo === 'FC' ? 'cell-vac' : noHores.tipo === 'FS' ? 'cell-fs'
+                       : noHores.tipo === 'FO' ? 'cell-fo'  : noHores.tipo === 'VE' ? 'cell-ve' : 'cell-apch');
+      addCellIcon(cell, TIPO_INFO[noHores.tipo].ic, noHores.titulo);
+    } else if (fest) {
+      cell.classList.add('cell-fest');
+      addCellIcon(cell, '🎉', fest.titulo);
+    } else if (fodes) {
+      addCellIcon(cell, TIPO_INFO.FODES.ic, fodes.titulo);
+    }
+
+    /* 1b. Marca de cap de setmana: un sombrejat per sobre, sense tocar
+           ni el color de fons ni la icona del dia. */
+    if (evsDia.filter(function(ev){ return ev.tipo === 'CS'; })[0]) {
+      cell.classList.add('has-cs');
+      var wash = document.createElement('div');
+      wash.className = 'cs-wash';
+      cell.appendChild(wash);
+    }
+
+    /* 2. Franja superior: LLIC/BAIXA/VA/EBEP sobre torn, o FO/DES sempre */
+    if (torn && overlay) {
+      cell.classList.add(overlay.tipo === 'LLIC' ? 'has-llic' : overlay.tipo === 'BAIXA' ? 'has-bxa'
+                       : overlay.tipo === 'VA'   ? 'has-va'   : 'has-ebep');
+      cell.dataset.overlay = overlay.tipo;
+    } else if (fodes) {
+      cell.classList.add('has-fodes');
+      cell.dataset.overlay = 'FO/DES';
+    }
+
+    /* Etiqueta accessible amb el contingut real del dia */
+    var resum = evsDia.map(function(ev){ return (TIPO_INFO[ev.tipo] || {}).label || ev.titulo; }).join(', ');
+    cell.setAttribute('aria-label', DIES_CURT[dow] + ' ' + dia + ' ' + MESOS[mesV] + (resum ? ' — ' + resum : ' — lliure'));
+    cell.title = resum || 'Sense events';
+
+    if (sel.has(fiso)) cell.classList.add('selected');
+    frag.appendChild(cell);
+  }
+
+  grid.innerHTML = '';
+  grid.appendChild(frag);
+}
+
+function addCellIcon(cell, icon, titulo) {
+  var ic = document.createElement('div'); ic.className = 'ev-icon'; ic.textContent = icon;
+  cell.appendChild(ic);
+  if (titulo) {
+    var lb = document.createElement('div'); lb.className = 'ev-lbl'; lb.textContent = titulo;
+    cell.appendChild(lb);
+  }
+}
+
+/* Petit rebot als dies que acaben de canviar: confirma l'acció sense text */
+function marcarPintats(fechas) {
+  if (menysMoviment()) return;
+  fechas.forEach(function(f) {
+    var c = document.querySelector('.day-cell[data-fecha="' + f + '"]');
+    if (!c) return;
+    c.classList.add('just-saved');
+    setTimeout(function(){ c.classList.remove('just-saved'); }, 460);
+  });
+}
+
+/* ===================== SELECCIÓ (toc, arrossegament i selecció ràpida) ===================== */
+var _pint = null;          // traç de pintura en curs
+var _suprimirClick = false;
+
+function muntarPintat() {
+  var grid = $('calGrid');
+
+  grid.addEventListener('pointerdown', function(e) {
+    var cell = e.target.closest ? e.target.closest('.day-cell[data-fecha]') : null;
+    if (!cell) return;
+    if (!modo) return;                       // sense mode, el toc obre la info
+    e.preventDefault();
+    var f = cell.dataset.fecha;
+    var afegint = !sel.has(f);
+    aplicarSel(f, afegint);
+    _pint = { afegint: afegint, vistos: {} };
+    _pint.vistos[f] = 1;
+    _suprimirClick = true;
+    vib(6);
+    try { grid.setPointerCapture(e.pointerId); } catch(err2) {}
+  });
+
+  grid.addEventListener('pointermove', function(e) {
+    if (!_pint) return;
+    var el = document.elementFromPoint(e.clientX, e.clientY);
+    var cell = el && el.closest ? el.closest('.day-cell[data-fecha]') : null;
+    if (!cell) return;
+    var f = cell.dataset.fecha;
+    if (_pint.vistos[f]) return;
+    _pint.vistos[f] = 1;
+    aplicarSel(f, _pint.afegint);
+    vib(4);
+  });
+
+  ['pointerup','pointercancel'].forEach(function(ev) {
+    window.addEventListener(ev, function() {
+      if (!_pint) return;
+      _pint = null;
+      setTimeout(function(){ _suprimirClick = false; }, 60);
+    });
+  });
+
+  grid.addEventListener('click', function(e) {
+    var cell = e.target.closest ? e.target.closest('.day-cell[data-fecha]') : null;
+    if (!cell) return;
+    if (_suprimirClick) { _suprimirClick = false; return; }
+    if (modo) { var f = cell.dataset.fecha; aplicarSel(f, !sel.has(f)); vib(6); return; }
+    showInfo(parseInt(cell.dataset.dia, 10));
+  });
+}
+
+function aplicarSel(fiso, afegir) {
+  if (afegir) sel.add(fiso); else sel.delete(fiso);
+  var c = document.querySelector('.day-cell[data-fecha="' + fiso + '"]');
+  if (c) c.classList.toggle('selected', afegir);
+  updateBadge();
+}
+
+/* Selecció ràpida del mes visible */
+function selRapida(quin) {
+  if (!modo) return;
+  var diasMes = new Date(anioV, mesV + 1, 0).getDate();
+  if (quin === 'none') {
+    sel.clear();
+  } else {
+    for (var d = 1; d <= diasMes; d++) {
+      var dow  = new Date(anioV, mesV, d).getDay();
+      var fiso = iso(anioV, mesV, d);
+      var ok   = quin === 'all'  ? true
+               : quin === 'week' ? (dow >= 1 && dow <= 5)
+               : quin === 'we'   ? (dow === 0 || dow === 6)
+               : quin === 'free' ? !evsDelDia(anioV, mesV, d).some(function(e){ return esEventApp(e.titulo); })
+               : false;
+      if (ok) sel.add(fiso);
+    }
+  }
+  vib(12);
+  buildGrid();
+  updateBadge();
+}
+
+function updateBadge() {
+  var b = $('selBadge'), n = sel.size;
+  if (n > 0) { b.textContent = n + (n === 1 ? ' dia' : ' dies'); b.style.display = 'inline-block'; }
+  else b.style.display = 'none';
+  refreshSelButtons();
+}
+
+function refreshSelButtons() {
+  var save = $('btnDesarSel'), cancel = $('btnCancelSel');
+  if (modo && sel.size > 0) {
+    save.textContent = modo === 'BORRAR' ? '🗑️ Eliminar' : '✓ Desar';
+    save.classList.toggle('mode-borrar', modo === 'BORRAR');
+    save.style.display = 'inline-block';
+  } else {
+    save.style.display = 'none';
+  }
+  cancel.style.display = modo ? 'inline-flex' : 'none';
+}
+
+/* ===================== MODES ===================== */
+var ALL_BTN_IDS = ['btn-mat','btn-com','btn-esp','btn-bor','btn-llic','btn-bxa','btn-ve','btn-apch','btn-va','btn-ebep','btn-fc','btn-fs','btn-fo','btn-fod','btn-cs'];
+var ALL_LEG_IDS = ['leg-mati','leg-comp','leg-esp','leg-llic','leg-bxa','leg-ve','leg-apch','leg-va','leg-ebep','leg-fc','leg-fs','leg-fo','leg-fod','leg-cs','leg-bor'];
+var MODO_TO_BTN = { MATI:'btn-mat', COMPLETO:'btn-com', ESPECIAL:'btn-esp', BORRAR:'btn-bor',
+  LLIC:'btn-llic', BAIXA:'btn-bxa', VE:'btn-ve', APCH:'btn-apch', VA:'btn-va', EBEP:'btn-ebep',
+  FC:'btn-fc', FS:'btn-fs', FO:'btn-fo', FODES:'btn-fod', CS:'btn-cs' };
+var MODO_TO_LEG = { MATI:'leg-mati', COMPLETO:'leg-comp', ESPECIAL:'leg-esp', BORRAR:'leg-bor',
+  LLIC:'leg-llic', BAIXA:'leg-bxa', VE:'leg-ve', APCH:'leg-apch', VA:'leg-va', EBEP:'leg-ebep',
+  FC:'leg-fc', FS:'leg-fs', FO:'leg-fo', FODES:'leg-fod', CS:'leg-cs' };
+var MODO_LABELS = {
+  MATI:     function(){ return '☀️ Matí ' + cfgMati.ini + '→' + cfgMati.fin; },
+  COMPLETO: function(){ return '🌙 Complet ' + cfgComp.ini + '→' + cfgComp.fin; },
+  ESPECIAL: function(){ return '⏰ Especial ' + cfgEsp.ini + '→' + cfgEsp.fin; },
+  LLIC:     function(){ return '📋 LLIC — manté les hores del torn'; },
+  BAIXA:    function(){ return '🏥 BAIXA — manté les hores del torn'; },
+  VE:       function(){ return '🌿 VE — Vacances d\'Estiu'; },
+  APCH:     function(){ return '🗓️ AP/CH — Assumptes Personals / Comp.'; },
+  VA:       function(){ return '🏅 VA — Antiguitat (compta com treballat)'; },
+  EBEP:     function(){ return '💼 EBEP — compta com treballat'; },
+  FC:       function(){ return '📆 FC — Festes Ajust Hores Conveni'; },
+  FS:       function(){ return '📅 FS — Festiu Setmanal'; },
+  FO:       function(){ return '🔴 FO — Festiu Oficial'; },
+  FODES:    function(){ return '💰 FO/DES — festiu oficial amb 150€'; },
+  CS:       function(){ return '🌸 Marca de cap de setmana — només pinta, no toca les hores'; },
+  BORRAR:   function(){ return '🗑️ Dies a eliminar'; }
+};
+var MODO_COLORS = {
+  MATI:'#0288D1',COMPLETO:'#3949AB',ESPECIAL:'#7B1FA2',
+  LLIC:'#C2185B',BAIXA:'#AD1457',
+  VE:'#2E7D32',APCH:'#558B2F',VA:'#4E342E',EBEP:'#006064',
+  FC:'#00695C',FS:'#37474F',FO:'#BF360C',FODES:'#F57F17',CS:'#C51162',BORRAR:'#E53935'
+};
+
+function toggleModo(m) {
+  if (modo === m) {
+    if (sel.size === 0) { desactivar(); return; }
+    guardarCambios(m);
+    return;
+  }
+  if (BOLSA_TYPES.indexOf(m) !== -1) {
+    var bT = bolsaTotals[m] || 0, bU = bolsaUsed[m] || 0;
+    if (bT > 0 && bU >= bT) { toast('🚫 Bolsa de ' + m + ' exhaurida (' + bU + '/' + bT + ')', 'err', 3200); return; }
+    var bR = bT - bU;
+    if (bT > 0 && bR <= 2) toast('⚠️ Només queden ' + bR + ' dies de ' + m, 'warn', 2600);
+  }
+  vib(12);
+  modo = m; sel.clear();
+  updateUI(); updateBadge(); buildGrid();
+}
+
+function desactivar() {
+  modo = null; sel.clear();
+  updateUI(); updateBadge(); buildGrid();
+}
+
+function updateUI() {
+  ALL_BTN_IDS.forEach(function(id){ var el = $(id); if (el) el.classList.remove('is-active'); });
+  ALL_LEG_IDS.forEach(function(id){ var el = $(id); if (el) el.classList.remove('leg-active'); });
+  var t = $('modoTxt');
+  var card = document.querySelector('.cal-card'), grid = $('calGrid');
+
+  if (modo && MODO_TO_BTN[modo]) {
+    $(MODO_TO_BTN[modo]).classList.add('is-active');
+    if (MODO_TO_LEG[modo]) $(MODO_TO_LEG[modo]).classList.add('leg-active');
+    t.textContent   = MODO_LABELS[modo]();
+    t.style.color   = MODO_COLORS[modo] || '';
+    card.classList.add('mode-on');
+    card.style.setProperty('--mode-col', MODO_COLORS[modo] || 'var(--blue)');
+    grid.classList.add('mode-on');
+    $('quickBar').classList.add('on');
+  } else {
+    t.textContent = 'Toca un dia per veure\'n els detalls, o tria un mode';
+    t.style.color = '';
+    card.classList.remove('mode-on');
+    grid.classList.remove('mode-on');
+    $('quickBar').classList.remove('on');
+  }
+}
+
+/* ===================== MUTACIONS LOCALS (base de l'actualització optimista) ===================== */
+function evsAppDelDia(p, m, d) {
+  return (p.eventos || []).filter(function(e){ return e.m === m && e.d === d && esEventApp(e.n); })
+                          .map(function(e){ return { t:e.t, n:e.n, h:e.h }; });
+}
+function netejarDia(p, m, d, grup) {
+  p.eventos = (p.eventos || []).filter(function(e) {
+    if (e.m !== m || e.d !== d || !esEventApp(e.n)) return true;
+    return grup ? grupoDe(e.t) !== grup : false;
+  });
+}
+function treuTorns(p, fiso) {
+  p.torns = (p.torns || []).filter(function(t){ return t.f !== fiso; });
+}
+function afegirEv(p, m, d, fiso, ev) {
+  p.eventos.push({ m:m, d:d, t:ev.t, n:ev.n, h:ev.h });
+  if (grupoDe(ev.t) === 'TORN') {
+    var hh = parseHorari(ev.h);
+    if (hh) p.torns.push({ f:fiso, a:hh.a, b:hh.b });
+  }
+}
+/* Aplica el canvi i retorna, per a cada dia, què hi havia abans (per a Desfés) */
+function mutarLocal(anio, fechas, accion, cfgEv) {
+  var p = ANYS[anio];
+  if (!p) return null;
+  var prev = [];
+  fechas.forEach(function(f) {
+    var pr = f.split('-'), m = +pr[1] - 1, d = +pr[2];
+    prev.push({ f:f, evs: evsAppDelDia(p, m, d) });
+    if (accion === 'BORRAR') {
+      netejarDia(p, m, d, null); treuTorns(p, f);
+    } else {
+      var grup = grupoDe(accion);
+      netejarDia(p, m, d, grup);
+      if (grup === 'TORN') treuTorns(p, f);
+      afegirEv(p, m, d, f, { t:accion, n:cfgEv.titulo, h:horariLlegible(accion, cfgEv) });
+    }
+  });
+  return prev;
+}
+function restaurarLocal(anio, prev) {
+  var p = ANYS[anio];
+  if (!p) return;
+  prev.forEach(function(x) {
+    var pr = x.f.split('-'), m = +pr[1] - 1, d = +pr[2];
+    netejarDia(p, m, d, null);
+    treuTorns(p, x.f);
+    (x.evs || []).forEach(function(e){ afegirEv(p, m, d, x.f, e); });
+  });
+}
+/* {t,n,h} → l'event tal com l'ha de tornar a crear el servidor */
+function reconstruirEv(e) {
+  var base = MODO_CFG[e.t] ? MODO_CFG[e.t]() : null;
+  var desc = base ? base.descripcion : '';
+  if (grupoDe(e.t) === 'TORN' && parseHorari(e.h)) desc = 'Horario: ' + e.h;
+  return { titulo: e.n, descripcion: desc, colorId: base ? base.colorId : null };
+}
+
+/* Envolcall comú de tota escriptura: optimista, amb reconciliació i Desfés */
+function operar(opts) {
+  // opts: {anio, mutar, msg, prev, crida}
+  var anio = opts.anio;
+  if (!ANYS[anio]) { toast('Encara s\'estan carregant les dades…', 'warn'); return; }
+  var snap = clone(ANYS[anio]);
+  var prev = opts.mutar();
+  if (prev === null) { toast('Encara s\'estan carregant les dades…', 'warn'); return; }
+
+  derivar(anio);
+  renderTot();
+  if (diaObert) showInfo(diaObert);
+  if (opts.fechas) marcarPintats(opts.fechas);
+  vib(18);
+
+  var seq = ++opSeq;
+  sync(1);
+
+  toast(opts.msg, 'info', 6000, prev && prev.length ? {
+    label: '↩️ Desfés',
+    fn: function(){ desfer(anio, prev); }
+  } : null);
+
+  opts.crida(
+    function(r) {                                   // èxit
+      sync(-1);
+      if (seq === opSeq && r && r.any) adoptar(r.any.anio, r.any);
+    },
+    function(e) {                                   // error → tornem enrere
+      sync(-1);
+      ANYS[anio] = snap; derivar(anio); renderTot();
+      if (diaObert) showInfo(diaObert);
+      err(e);
+    }
+  );
+}
+
+function desfer(anio, prev) {
+  var snap = clone(ANYS[anio]);
+  restaurarLocal(anio, prev);
+  derivar(anio); renderTot();
+  if (diaObert) showInfo(diaObert);
+  var dies = prev.map(function(x) {
+    return { f: x.f, evs: (x.evs || []).map(reconstruirEv) };
+  });
+  var seq = ++opSeq;
+  sync(1);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      sync(-1);
+      if (seq === opSeq && r && r.any) adoptar(r.any.anio, r.any);
+      toast('↩️ Canvi desfet', 'info', 2000);
+    })
+    .withFailureHandler(function(e) {
+      sync(-1);
+      ANYS[anio] = snap; derivar(anio); renderTot();
+      err(e);
+    })
+    .restaurarDies(calId, dies, anio);
+}
+
+/* ===================== DESAR ===================== */
+function guardarCambios(m) {
+  if (sel.size === 0) { toast('⚠️ Selecciona almenys un dia', 'warn'); return; }
+
+  if (m === 'BORRAR') {
+    confirmar(
+      'S\'eliminaran els events creats per l\'aplicació ' +
+      (sel.size === 1 ? 'del dia seleccionat' : 'dels ' + sel.size + ' dies seleccionats') +
+      '. Els teus events personals no es toquen.',
+      'Eliminar', function(){ executarGuardar(m); });
+    return;
+  }
+  executarGuardar(m);
+}
+
+function executarGuardar(m) {
+  if (BOLSA_TYPES.indexOf(m) !== -1) {
+    var bTotal = bolsaTotals[m] || 0, bUsed = bolsaUsed[m] || 0, bRem = bTotal - bUsed;
+    // Els dies ja marcats d'aquest tipus dins la selecció no compten dos cops
+    var jaMarcats = 0;
+    sel.forEach(function(f) {
+      var pr = f.split('-');
+      if (evsDelDia(+pr[0], +pr[1] - 1, +pr[2]).some(function(e){ return e.tipo === m; })) jaMarcats++;
+    });
+    var nous = sel.size - jaMarcats;
+    if (bTotal > 0 && bUsed >= bTotal && nous > 0) {
+      toast('🚫 Bolsa de ' + m + ' exhaurida (' + bTotal + ' dies)', 'err', 3500); return;
+    }
+    if (bTotal > 0 && nous > bRem) {
+      toast('⚠️ Només queden ' + bRem + ' dies de ' + m + ' i n\'afegeixes ' + nous, 'warn', 4000); return;
+    }
+  }
+
+  var fechas = Array.from(sel);
+  var cfg    = m !== 'BORRAR' ? (MODO_CFG[m] ? MODO_CFG[m]() : null) : null;
+  if (m !== 'BORRAR' && !cfg) { toast('❌ Mode desconegut', 'err'); return; }
+
+  var datos = { fechas: fechas, accion: m, calendarId: calId, anioVista: anioV };
+  if (cfg) { datos.titulo = cfg.titulo; datos.descripcion = cfg.descripcion; datos.colorId = cfg.colorId; }
+
+  var msg = m === 'BORRAR' ? '🗑️ ' + fechas.length + (fechas.length === 1 ? ' dia netejat' : ' dies netejats')
+                           : '✅ ' + fechas.length + (fechas.length === 1 ? ' dia desat' : ' dies desats');
+
+  modo = null; sel.clear();
+  updateUI(); updateBadge();
+
+  operar({
+    anio: anioV, fechas: fechas, msg: msg,
+    mutar: function(){ return mutarLocal(anioV, fechas, m, cfg); },
+    crida: function(ok, ko) {
+      google.script.run.withSuccessHandler(ok).withFailureHandler(ko).procesarListaDias(datos);
+    }
+  });
+}
+
+/* ===================== PANELL D'INFORMACIÓ ===================== */
+function netejarInfo() {
+  diaObert = null;
+  $('infoTitle').textContent = 'Selecciona un dia';
+  $('infoBadge').style.display = 'none';
+  $('infoBody').innerHTML = '<div class="info-empty">Toca un dia per veure els detalls</div>';
+}
+
+function showInfo(dia) {
+  diaObert = dia;
+  var evsDia = evsDelDia(anioV, mesV, dia);
+  var fiso   = iso(anioV, mesV, dia);
+  var dow    = DIES_CURT[new Date(anioV, mesV, dia).getDay()];
+  $('infoTitle').textContent = '📅 ' + dow + ' ' + dia + ' de ' + MESOS[mesV] + ' ' + anioV;
+  var badge = $('infoBadge');
+  badge.style.display = evsDia.length ? 'inline-block' : 'none';
+  badge.textContent = evsDia.length;
+
+  var body = $('infoBody'); body.innerHTML = '';
+  if (!evsDia.length) {
+    body.innerHTML = '<div class="info-empty">Dia lliure — tria un mode i toca el dia per marcar-lo</div>';
+    return;
+  }
+  evsDia.forEach(function(ev) {
+    var info = TIPO_INFO[ev.tipo] || { cls:'fest', ic:'📌', label:ev.tipo };
+    var d = document.createElement('div');
+    d.className = 'ev-card ' + info.cls;
+    d.innerHTML = '<div class="evc-icon">' + info.ic + '</div><div class="evc-info"><div class="evc-title">' + esc(ev.titulo) + '</div>' +
+      (grupoDe(ev.tipo) === 'TORN' ? '<div class="evc-time">⏱ ' + esc(ev.horario) + '</div>' : '') +
+      (ev.tipo === 'FODES' ? '<div class="evc-money">💰 +150€ compensació</div>' : '') +
+      (ev.tipo === 'CS' ? '<div class="evc-time">🌸 Només marca — no compta hores</div>' : '') +
+      (['VA','EBEP','LLIC','BAIXA'].indexOf(ev.tipo) !== -1 ? '<div class="evc-time">✓ Compta com a treballat</div>' : '') +
+      '</div>';
+    if (TIPOS_GESTIONABLES.indexOf(ev.tipo) !== -1) {
+      var acts = document.createElement('div'); acts.className = 'evc-actions';
+      var bE = document.createElement('button');
+      bE.className = 'evc-btn'; bE.textContent = '✏️'; bE.title = 'Canviar el tipus';
+      bE.setAttribute('aria-label', 'Canviar el tipus de ' + ev.titulo);
+      bE.onclick = function(e){ e.stopPropagation(); abrirEditSheet(dia, fiso, ev.titulo, ev.tipo); };
+      var bD = document.createElement('button');
+      bD.className = 'evc-btn'; bD.textContent = '🗑️'; bD.title = 'Eliminar aquest event';
+      bD.setAttribute('aria-label', 'Eliminar ' + ev.titulo);
+      bD.onclick = function(e){ e.stopPropagation(); eliminarEvento(dia, fiso, ev.titulo); };
+      acts.appendChild(bE); acts.appendChild(bD);
+      d.appendChild(acts);
+    }
+    body.appendChild(d);
+  });
+}
+
+function eliminarEvento(dia, fecha, titulo) {
+  confirmar('Eliminar "' + titulo + '" del ' + dia + ' de ' + MESOS[mesV] + '?', 'Eliminar', function() {
+    var m = mesV;
+    operar({
+      anio: anioV, fechas: [fecha], msg: '🗑️ Event eliminat',
+      mutar: function() {
+        var p = ANYS[anioV];
+        if (!p) return null;
+        var prev = [{ f: fecha, evs: evsAppDelDia(p, m, dia) }];
+        var fet = false;
+        p.eventos = p.eventos.filter(function(e) {
+          if (!fet && e.m === m && e.d === dia && e.n === titulo && esEventApp(e.n)) {
+            fet = true;
+            if (grupoDe(e.t) === 'TORN') treuTorns(p, fecha);
+            return false;
+          }
+          return true;
+        });
+        return prev;
+      },
+      crida: function(ok, ko) {
+        google.script.run.withSuccessHandler(ok).withFailureHandler(ko)
+          .eliminarEventoDia(fecha, titulo, calId, anioV);
+      }
+    });
+  });
+}
+
+/* ===================== CANVIAR EL TIPUS D'UN EVENT ===================== */
+var _editCtx = null;
+var _espEditPendent = false;
+
+function abrirEditSheet(dia, fecha, titulo, tipo) {
+  _editCtx = { dia:dia, mes:mesV, fecha:fecha, titulo:titulo, tipo:tipo };
+  $('editSheetTitle').textContent = '✏️ ' + titulo + ' → canviar a…';
+  var cont = $('editTypeList'); cont.innerHTML = '';
+  TIPOS_GESTIONABLES.forEach(function(t) {
+    var info = TIPO_INFO[t];
+    var it = document.createElement('div');
+    it.className = 'et-item' + (t === tipo ? ' current' : '');
+    it.innerHTML = '<div class="et-icon">' + info.ic + '</div><div class="et-name">' + info.label + '</div>' +
+                   (t === tipo ? '<div class="cal-chk">✓</div>' : '');
+    it.onclick = function(){ seleccionarNuevoTipo(t); };
+    cont.appendChild(it);
+  });
+  $('editSheetOv').classList.add('open');
+}
+function cerrarEditSheet(ev) {
+  if (!ev || ev.target === $('editSheetOv')) $('editSheetOv').classList.remove('open');
+}
+function seleccionarNuevoTipo(t) {
+  if (!_editCtx) return;
+  if (t === _editCtx.tipo) { cerrarEditSheet(); return; }
+  if (BOLSA_TYPES.indexOf(t) !== -1) {
+    var bT = bolsaTotals[t] || 0, bU = bolsaUsed[t] || 0;
+    if (bT > 0 && bU >= bT) { toast('🚫 Bolsa de ' + t + ' exhaurida (' + bU + '/' + bT + ')', 'err', 3200); return; }
+  }
+  cerrarEditSheet();
+  if (t === 'ESPECIAL') {
+    _espEditPendent = true;
+    $('espIni').value = ''; $('espFin').value = '';
+    $('modalEsp').classList.add('open');
+    return;
+  }
+  ejecutarCambioTipo(t);
+}
+function ejecutarCambioTipo(t) {
+  if (!_editCtx) return;
+  var ctx = _editCtx, cfg = MODO_CFG[t]();
+  operar({
+    anio: anioV, fechas: [ctx.fecha], msg: '✏️ Canviat a ' + TIPO_INFO[t].label,
+    mutar: function() {
+      var p = ANYS[anioV];
+      if (!p) return null;
+      var prev = [{ f: ctx.fecha, evs: evsAppDelDia(p, ctx.mes, ctx.dia) }];
+      var grup = grupoDe(t);
+      // Fora l'original i qualsevol altre del mateix grup que quedaria duplicat
+      p.eventos = p.eventos.filter(function(e) {
+        if (e.m !== ctx.mes || e.d !== ctx.dia || !esEventApp(e.n)) return true;
+        return !(e.n === ctx.titulo || grupoDe(e.t) === grup);
+      });
+      if (grup === 'TORN' || grupoDe(ctx.tipo) === 'TORN') treuTorns(p, ctx.fecha);
+      afegirEv(p, ctx.mes, ctx.dia, ctx.fecha, { t:t, n:cfg.titulo, h:horariLlegible(t, cfg) });
+      return prev;
+    },
+    crida: function(ok, ko) {
+      google.script.run.withSuccessHandler(ok).withFailureHandler(ko)
+        .cambiarTipoEvento(ctx.fecha, ctx.titulo,
+          { accion:t, titulo:cfg.titulo, descripcion:cfg.descripcion, colorId:cfg.colorId }, calId, anioV);
+    }
+  });
+}
+
+/* ===================== ESTADÍSTIQUES ===================== */
+function animarNum(el, valor, sufix, decimals) {
+  if (!el) return;
+  var clau = el.id || '';
+  var de   = _prevNums[clau];
+  _prevNums[clau] = valor;
+  var fmt = function(v){ return (decimals ? v.toFixed(decimals) : Math.round(v)) + (sufix || ''); };
+  if (de === undefined || de === valor || menysMoviment()) { el.textContent = fmt(valor); return; }
+  var t0 = performance.now(), dur = 420;
+  (function pas(t) {
+    var k = Math.min((t - t0) / dur, 1);
+    var e = 1 - Math.pow(1 - k, 3);
+    el.textContent = fmt(de + (valor - de) * e);
+    if (k < 1) requestAnimationFrame(pas);
+  })(t0);
+}
+
+function renderStats() {
+  var d = DERIV[anioV];
+  if (!d) return;
+  var plan = Math.round(d.plan * 10) / 10;
+  var real = Math.round(d.real * 10) / 10;
+  var obj  = parseFloat($('targetHours').value) || 1519;
+  var pctR = obj > 0 ? Math.round((real / obj) * 100) : 0;
+  var pctP = obj > 0 ? Math.round((plan / obj) * 100) : 0;
+
+  animarNum($('hours-plan'), plan, 'h', 1);
+  animarNum($('hours-real'), real, 'h', 1);
+  animarNum($('pct-done'),   pctR, '%');
+  animarNum($('ringPct'),    pctR, '%');
+  $('ringPlan').style.strokeDashoffset = 188.5 * (1 - Math.min(plan / obj, 1));
+  $('ringReal').style.strokeDashoffset = 157.1 * (1 - Math.min(real / obj, 1));
+  $('pbPlan').style.width = Math.min(pctP, 100) + '%';
+  $('pbReal').style.width = Math.min(pctR, 100) + '%';
+  $('pbPlanPct').textContent = pctP + '%';
+  $('pbRealPct').textContent = pctR + '%';
+
+  var diff = Math.round((plan - obj) * 10) / 10;
+  var diffEl = $('hours-diff');
+  if (diffEl) {
+    diffEl.textContent = (diff >= 0 ? '+' : '') + diff + 'h';
+    diffEl.className = 'ds-val ' + (diff > 0 ? 'diff-pos' : diff < 0 ? 'diff-neg' : '');
+    diffEl.style.fontSize = '15px';
+  }
+
+  $('ssPlan').textContent = plan + 'h';
+  $('ssReal').textContent = real + 'h';
+  $('ssRingTxt').textContent = pctR + '%';
+  $('ssRing').style.background = 'conic-gradient(var(--green-l) ' + Math.min(pctR, 100) + '%, var(--track) 0)';
+  $('ssFillPlan').style.width = Math.min(pctP, 100) + '%';
+  $('ssFillReal').style.width = Math.min(pctR, 100) + '%';
+  ['hours-plan','hours-real','pct-done','ssPlan','ssReal'].forEach(function(id) {
+    var el = $(id); if (el) el.classList.remove('sk');
+  });
+}
+
+function renderExtras() {
+  var d = DERIV[anioV];
+  if (!d) return;
+  var r = d.resumen;
+  $('xFodes').textContent = (r.fodes || 0) + ' FO/DES';
+  $('xMonto').textContent = '· ' + (r.fodesMonto || 0) + '€';
+  $('xFC').textContent    = (r.fc || 0) + ' FC';
+  $('xLlic').textContent  = (r.llic || 0) + ' LLIC';
+  $('xBaixa').textContent = (r.baixa || 0) + ' BAIXA';
+}
+
+/* ===================== PRIMA PER CAP DE SETMANA ===================== */
+function renderCaps() {
+  var d = DERIV[anioV];
+  if (!d) return;
+  var n = d.caps.length, eur = n * CAP_SETMANA_EUROS;
+  $('capsAny').textContent     = anioV;
+  $('capsAnyCobr').textContent = anioV + 1;
+  animarNum($('capsN'), n, '');
+  animarNum($('capsEur'), eur, '€');
+  $('capsBar').classList.toggle('buit', n === 0);
+  $('xCaps').textContent    = n + (n === 1 ? ' cap setm.' : ' caps setm.');
+  $('xCapsEur').textContent = '· ' + eur + '€';
+  var com = d.capsManual ? 'marcats a mà' : 'detectats automàticament';
+  $('capsSub').textContent = n === 0
+    ? (d.capsManual ? 'Cap parell complet marcat encara' : 'Cap encara — cal dissabte i diumenge treballats sencers')
+    : n + (n === 1 ? ' cap de setmana ' : ' caps de setmana ') + com + ' × ' + CAP_SETMANA_EUROS + '€';
+}
+
+/* Passa la detecció automàtica a marques reals al calendari, perquè després
+   l'usuari les pugui ajustar una a una. */
+function marcarCapsAuto() {
+  var d = DERIV[anioV];
+  if (!d) return;
+  var vist = {}, fechas = [];
+  d.capsAuto.forEach(function(c) {
+    [c.ds, c.dg].forEach(function(f) {
+      var pr = f.split('-'), k = (+pr[1] - 1) + '_' + (+pr[2]);
+      if (d.marcat[k] || vist[f]) return;
+      vist[f] = 1; fechas.push(f);
+    });
+  });
+  if (!fechas.length) { toast('Ja estan tots marcats', 'info'); return; }
+  var cfg = MODO_CFG.CS();
+  operar({
+    anio: anioV, fechas: fechas,
+    msg: '🌸 ' + fechas.length + ' dies marcats',
+    mutar: function(){ return mutarLocal(anioV, fechas, 'CS', cfg); },
+    crida: function(ok, ko) {
+      google.script.run.withSuccessHandler(ok).withFailureHandler(ko)
+        .procesarListaDias({ fechas: fechas, accion: 'CS', calendarId: calId, anioVista: anioV,
+                             titulo: cfg.titulo, descripcion: cfg.descripcion, colorId: cfg.colorId });
+    }
+  });
+}
+
+/* Detall: quins caps de setmana compten, per poder-ho contrastar amb la nòmina */
+function mostrarCaps() {
+  var d = DERIV[anioV];
+  if (!d) return;
+  var caps = d.caps;
+  $('capsSheetTitle').textContent = '💶 Caps de setmana ' + anioV + ' → es cobren el ' + (anioV + 1);
+  var cont = $('capsList'); cont.innerHTML = '';
+
+  var mode = document.createElement('div');
+  mode.className = 'caps-mode';
+  mode.innerHTML = d.capsManual
+    ? '🌸 Es compten els caps de setmana que has <b>marcat a mà</b>. Fes servir l\'eina 🌸 per afegir-ne o treure\'n.'
+    : 'Ara es compten <b>automàticament</b>: dissabte i diumenge amb torn i sense cap absència. Amb l\'eina 🌸 pots decidir-ho tu.';
+  cont.appendChild(mode);
+
+  var pendents = (d.capsAuto || []).filter(function(c) {
+    var a = c.ds.split('-'), b = c.dg.split('-');
+    return !(d.marcat[(+a[1] - 1) + '_' + (+a[2])] && d.marcat[(+b[1] - 1) + '_' + (+b[2])]);
+  });
+  if (pendents.length) {
+    var bm = document.createElement('button');
+    bm.className = 'btn-marcar-caps';
+    bm.textContent = '🌸 Marcar els ' + pendents.length + ' que surten treballats';
+    bm.onclick = function(){ cerrarCapsSheet(); marcarCapsAuto(); };
+    cont.appendChild(bm);
+  }
+
+  if (!caps.length) {
+    var buit = document.createElement('div');
+    buit.className = 'caps-empty';
+    buit.innerHTML = d.capsManual
+      ? 'Cap parell complet. Cal marcar <b>el dissabte i el diumenge</b> del mateix cap de setmana.'
+      : 'Encara no n\'hi ha cap. Compten els que tenen <b>dissabte i diumenge</b> amb torn i sense cap absència ' +
+        '(baixa, llicència, AP/CH, VE, VA, EBEP, FC, FS, FO o festiu oficial).';
+    cont.appendChild(buit);
+  } else {
+    var perMes = {};
+    caps.forEach(function(c) { (perMes[c.mes] = perMes[c.mes] || []).push(c); });
+    Object.keys(perMes).sort(function(a, b){ return a - b; }).forEach(function(m) {
+      var h = document.createElement('div');
+      h.className = 'caps-mes';
+      h.textContent = MESOS[m] + ' — ' + perMes[m].length * CAP_SETMANA_EUROS + '€';
+      cont.appendChild(h);
+      perMes[m].forEach(function(c) {
+        var ds = c.ds.split('-'), dg = c.dg.split('-');
+        var mS = +ds[1] - 1, mG = +dg[1] - 1;
+        // Si el cap de setmana canvia de mes, s'anomenen tots dos
+        var txt = mS === mG
+          ? 'ds. ' + (+ds[2]) + ' + dg. ' + (+dg[2]) + ' de ' + MESOS[mG]
+          : 'ds. ' + (+ds[2]) + ' ' + MESOS[mS] + ' + dg. ' + (+dg[2]) + ' ' + MESOS[mG];
+        var row = document.createElement('div');
+        row.className = 'caps-row';
+        row.innerHTML = '<span class="caps-dates">' + txt + '</span><span class="caps-eur-row">+' + CAP_SETMANA_EUROS + '€</span>';
+        cont.appendChild(row);
+      });
+    });
+    var tot = document.createElement('div');
+    tot.className = 'caps-total';
+    tot.innerHTML = '<span>Total a cobrar el ' + (anioV + 1) + '</span><b>' + (caps.length * CAP_SETMANA_EUROS) + '€</b>';
+    cont.appendChild(tot);
+  }
+  $('capsSheetOv').classList.add('open');
+}
+function cerrarCapsSheet(ev) {
+  if (!ev || ev.target === $('capsSheetOv')) $('capsSheetOv').classList.remove('open');
+}
+
+var BOLSA_FILL_COLORS = { VE:'var(--ve)', APCH:'var(--apch)', VA:'var(--va)', EBEP:'var(--ebep)' };
+
+function renderBolsas() {
+  BOLSA_TYPES.forEach(function(t) {
+    var total     = bolsaTotals[t] || 0;
+    var used      = bolsaUsed[t]   || 0;
+    var rem       = Math.max(total - used, 0);
+    var pct       = total > 0 ? Math.min(Math.round((used / total) * 100), 100) : 0;
+    var exhausted = total > 0 && used >= total;
+    var warning   = !exhausted && total > 0 && rem <= 2;
+    var id        = t.toLowerCase();
+    var remEl = $('bc-' + id + '-rem'), filEl = $('bc-' + id + '-fill'), usdEl = $('bc-' + id + '-used');
+    var card  = document.querySelector('.bolsa-card.bc-' + id);
+    if (remEl) animarNum(remEl, rem, '');
+    if (filEl) {
+      filEl.style.width = pct + '%';
+      filEl.style.background = exhausted ? '#E53935' : warning ? '#F57C00' : BOLSA_FILL_COLORS[t];
+    }
+    if (usdEl) usdEl.textContent = used + ' / ' + total + ' usats';
+    if (card) {
+      var lblEl = card.querySelector('.bc-rem-lbl');
+      if (lblEl) lblEl.textContent = exhausted ? '⚠️ EXHAURIT' : warning ? '⚠️ gairebé exhaurit' : 'disponibles';
+      card.classList.toggle('bc-exhausted', exhausted);
+      card.classList.toggle('bc-warning', warning);
+    }
+  });
+}
+
+/* ===================== BOLSA / OBJECTIU / CONFIG ===================== */
+function abrirModalBolsa() {
+  $('bVE').value = bolsaTotals.VE || 0;
+  $('bAPCH').value = bolsaTotals.APCH || 0;
+  $('bVA').value = bolsaTotals.VA || 0;
+  $('bEBEP').value = bolsaTotals.EBEP || 0;
+  $('modalBolsa').classList.add('open');
+}
+function guardarBolsas() {
+  var b = {
+    VE:   parseInt($('bVE').value, 10)   || 0,
+    APCH: parseInt($('bAPCH').value, 10) || 0,
+    VA:   parseInt($('bVA').value, 10)   || 0,
+    EBEP: parseInt($('bEBEP').value, 10) || 0
+  };
+  bolsaTotals = b;
+  if (ANYS[anioV]) { ANYS[anioV].bolsas = b; guardarLocal(anioV); }
+  renderBolsas();
+  cerrarModals();
+  toast('✅ Bolsa desada', 'info', 1800);
+  sync(1);
+  google.script.run
+    .withSuccessHandler(function(){ sync(-1); })
+    .withFailureHandler(function(e){ sync(-1); err(e); })
+    .saveBolsas(anioV, b);
+}
+function guardarObjetivo() {
+  var v = $('targetHours').value;
+  try { localStorage.setItem('obj_' + anioV, v); localStorage.setItem('obj', v); } catch(e) {}
+  renderStats();
+  var cfg = {}; cfg['obj_' + anioV] = v;
+  google.script.run.saveUserConfig(cfg);
+}
+function cargarLocal() {
+  try {
+    var v = localStorage.getItem('obj_' + anioV) || localStorage.getItem('obj');
+    if (v) $('targetHours').value = v;
+    var m = localStorage.getItem('cfgMati'); if (m) cfgMati = JSON.parse(m);
+    var c = localStorage.getItem('cfgComp'); if (c) cfgComp = JSON.parse(c);
+  } catch(e) {}
+}
+function aplicarConfigServidor(cfg) {
+  if (!cfg) return;
+  var input = $('targetHours');
+  var objSrv = cfg['obj_' + anioV];
+  if (objSrv && document.activeElement !== input) {
+    input.value = objSrv;
+    try { localStorage.setItem('obj_' + anioV, objSrv); } catch(e) {}
+  }
+  try {
+    if (cfg.mati) { cfgMati = cfg.mati; localStorage.setItem('cfgMati', JSON.stringify(cfgMati)); }
+    if (cfg.comp) { cfgComp = cfg.comp; localStorage.setItem('cfgComp', JSON.stringify(cfgComp)); }
+  } catch(e) {}
+  if (modo) updateUI();
+}
+
+function toggleStats(force) {
+  var p = $('statsPanel'), s = $('statsStrip');
+  var open = typeof force === 'boolean' ? force : !p.classList.contains('open');
+  p.classList.toggle('open', open);
+  s.classList.toggle('open', open);
+  s.setAttribute('aria-expanded', open);
+  try { localStorage.setItem('uiStats', open ? '1' : '0'); } catch(e) {}
+}
+
+function abrirConfig() {
+  $('cfgMatiIni').value = cfgMati.ini;
+  $('cfgMatiFin').value = cfgMati.fin;
+  $('cfgCompIni').value = cfgComp.ini;
+  $('cfgCompFin').value = cfgComp.fin;
+  $('modalConfig').classList.add('open');
+  cargarFestivosEditor();
+}
+function cerrarModals() {
+  $('modalConfig').classList.remove('open');
+  $('modalEsp').classList.remove('open');
+  $('modalBolsa').classList.remove('open');
+  _espEditPendent = false;
+}
+function closeOnBg(ev, id) { if (ev.target === $(id)) cerrarModals(); }
+
+/* ===================== FESTIUS ===================== */
+function cargarFestivosEditor() {
+  var anio = $('selAnioFestivos').value;
+  var cont = $('fesList');
+  cont.innerHTML = '<div style="text-align:center;font-size:12px;color:var(--txt2);padding:12px">Carregant…</div>';
+  google.script.run.withSuccessHandler(function(lista) {
+    cont.innerHTML = '';
+    if (!lista.length) {
+      cont.innerHTML = '<div style="font-size:12px;color:var(--txt2);text-align:center;padding:12px">' +
+        'Cap festiu propi per a ' + anio + ' — s\'usa el calendari oficial de Catalunya</div>';
+    }
+    lista.forEach(function(f) {
+      agregarInputFestivo(anio + '-' + pad2(f.mes + 1) + '-' + pad2(f.dia), f.titulo);
+    });
+  }).withFailureHandler(err).getFestivosParaEditar(anio);
+}
+function agregarInputFestivo(fecha, titulo) {
+  var cont = $('fesList');
+  var div = document.createElement('div'); div.className = 'fes-item';
+  var fIn = document.createElement('input');
+  fIn.type = 'date'; fIn.className = 'form-in fes-date holiday-date'; fIn.value = fecha;
+  var tIn = document.createElement('input');
+  tIn.type = 'text'; tIn.className = 'form-in holiday-name'; tIn.value = titulo; tIn.placeholder = 'Nom del festiu';
+  var del = document.createElement('button');
+  del.className = 'btn-del-fes'; del.textContent = '✕'; del.title = 'Treure aquest festiu';
+  del.onclick = function(){ div.remove(); };
+  div.appendChild(fIn); div.appendChild(tIn); div.appendChild(del);
+  cont.appendChild(div);
+}
+function sincronizarFestivosWeb() {
+  var anio = $('selAnioFestivos').value;
+  confirmar('Importar els festius oficials de ' + anio + '? La llista actual es reemplaçarà.',
+    'Importar', function() {
+      var cont = $('fesList');
+      cont.innerHTML = '<div style="text-align:center;padding:20px;color:var(--mati);font-weight:800">⏳ Connectant amb Barcelona.cat…</div>';
+      google.script.run
+        .withSuccessHandler(function(l) {
+          cont.innerHTML = '';
+          if (!l.length) { toast('No s\'han trobat festius per a ' + anio, 'warn', 3000); cargarFestivosEditor(); return; }
+          l.forEach(function(f) { agregarInputFestivo(anio + '-' + pad2(f.mes + 1) + '-' + pad2(f.dia), f.titulo); });
+          toast('✅ ' + l.length + ' festius importats — recorda desar', 'info', 3200);
+        })
+        .withFailureHandler(function(e){ cont.innerHTML = ''; err(e); cargarFestivosEditor(); })
+        .importarFestivosWebAnual(anio);
+    }, true);
+}
+function guardarConfig() {
+  cfgMati.ini = $('cfgMatiIni').value || '08:30';
+  cfgMati.fin = $('cfgMatiFin').value || '15:00';
+  cfgComp.ini = $('cfgCompIni').value || '08:30';
+  cfgComp.fin = $('cfgCompFin').value || '19:00';
+  try {
+    localStorage.setItem('cfgMati', JSON.stringify(cfgMati));
+    localStorage.setItem('cfgComp', JSON.stringify(cfgComp));
+  } catch(e) {}
+  google.script.run.saveUserConfig({ mati: cfgMati, comp: cfgComp });
+
+  var anio  = parseInt($('selAnioFestivos').value, 10);
+  var lista = [];
+  document.querySelectorAll('.fes-item').forEach(function(r) {
+    var fd = r.querySelector('.holiday-date').value, fn = r.querySelector('.holiday-name').value;
+    if (fd && fn) { var p = fd.split('-'); lista.push({ dia:+p[2], mes:+p[1] - 1, titulo:fn }); }
+  });
+
+  cerrarModals();
+  toast('✅ Configuració desada', 'info', 2000);
+  if (modo) updateUI();
+
+  // Els festius de l'any editat canvien: refresquem aquell any
+  sync(1);
+  google.script.run
+    .withSuccessHandler(function() {
+      delete ANYS[anio]; delete DERIV[anio];
+      google.script.run
+        .withSuccessHandler(function(p){ sync(-1); adoptar(anio, p); })
+        .withFailureHandler(function(e){ sync(-1); err(e); })
+        .obtenerAnyComplet(anio, calId);
+    })
+    .withFailureHandler(function(e){ sync(-1); err(e); })
+    .guardarFestivosUsuario(anio, lista);
+}
+
+/* ===================== TORN ESPECIAL ===================== */
+function prepararEspecial() {
+  if (modo === 'ESPECIAL') { toggleModo('ESPECIAL'); return; }
+  $('espIni').value = cfgEsp.ini || '';
+  $('espFin').value = cfgEsp.fin || '';
+  $('modalEsp').classList.add('open');
+}
+function activarModoEspecial() {
+  var i = $('espIni').value, f = $('espFin').value;
+  if (!i || !f) { toast("Indica l'hora d'inici i la de fi", 'warn'); return; }
+  if (i >= f)   { toast("L'hora de fi ha de ser posterior a la d'inici", 'warn', 3000); return; }
+  cfgEsp.ini = i; cfgEsp.fin = f;
+  var esEdicio = _espEditPendent;
+  cerrarModals();
+  if (esEdicio) { ejecutarCambioTipo('ESPECIAL'); return; }
+  modo = 'ESPECIAL'; sel.clear();
+  updateUI(); updateBadge(); buildGrid();
+}
+
+/* ===================== VISTA ANUAL ===================== */
+function abrirVistaAnual() {
+  $('yearView').style.display = 'block';
+  cargarVistaAnual();
+}
+function cerrarVistaAnual() { $('yearView').style.display = 'none'; }
+
+function cargarVistaAnual() {
+  var anio = parseInt($('selAnioVista').value, 10);
+  $('printYearLbl').textContent   = anio;
+  $('printYearTitle').textContent = anio;
+  $('printUser').textContent      = $('current-email').textContent;
+  var h = new Date();
+  $('printDate').textContent = 'Generat el ' + h.getDate() + '/' + (h.getMonth() + 1) + '/' + h.getFullYear();
+
+  if (ANYS[anio]) { pintarVistaAnual(anio); return; }
+
+  $('yearGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--txt2)">Generant calendari…</div>';
+  sync(1);
+  google.script.run
+    .withSuccessHandler(function(p) {
+      sync(-1);
+      ANYS[anio] = p; derivar(anio); guardarLocal(anio);
+      pintarVistaAnual(anio);
+    })
+    .withFailureHandler(function(e) {
+      sync(-1);
+      $('yearGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--red)">❌ ' + esc(e.message) + '</div>';
+    })
+    .obtenerAnyComplet(anio, calId);
+}
+
+function pintarVistaAnual(anio) {
+  var d = DERIV[anio], p = ANYS[anio];
+  if (!d || !p) return;
+
+  var objY = parseFloat(localStorage.getItem('obj_' + anio) || localStorage.getItem('obj') || '1519') || 1519;
+  var plan = Math.round(d.plan * 10) / 10, real = Math.round(d.real * 10) / 10;
+  $('pf-obj').textContent  = objY + 'h';
+  $('pf-plan').textContent = plan + 'h';
+  $('pf-real').textContent = real + 'h';
+  $('pf-pct').textContent  = objY > 0 ? Math.round((real / objY) * 100) + '%' : '—%';
+  var diff = Math.round((plan - objY) * 10) / 10;
+  var diffEl = $('pf-diff');
+  diffEl.textContent = (diff >= 0 ? '+' : '') + diff + 'h';
+  diffEl.style.color = diff > 0 ? 'var(--green)' : diff < 0 ? 'var(--red)' : '#888';
+
+  var r = d.resumen;
+  var map = { yfodes:r.fodes, yfc:r.fc, yfs:r.fs, yfo:r.fo, yllic:r.llic, ybaixa:r.baixa,
+              yve:r.ve, yapch:r.apch, yva:r.va, yebep:r.ebep, ymati:r.mati, ycomplet:r.complet,
+              yespecial:r.especial };
+  for (var k in map) { var el = $(k); if (el) el.textContent = map[k] || 0; }
+  $('ymonto').textContent = (r.fodesMonto || 0) + '€';
+  $('ycaps').textContent     = r.caps || 0;
+  $('ycapsEur').textContent  = (r.capsMonto || 0) + '€';
+  $('ycapsAny').textContent  = anio + 1;
+  $('pf-caps').textContent   = (r.capsMonto || 0) + '€';
+  $('pf-caps-lbl').textContent = 'Caps setm. ' + (anio + 1);
+  var chipEsp = $('chip-especial');
+  if (chipEsp) chipEsp.style.display = (r.especial || 0) > 0 ? '' : 'none';
+
+  var b = p.bolsas || {};
+  [['yve-tot','VE'],['yapch-tot','APCH'],['yva-tot','VA'],['yebep-tot','EBEP']].forEach(function(x) {
+    var el = $(x[0]); if (el) el.textContent = b[x[1]] > 0 ? b[x[1]] : '—';
+  });
+
+  var grid = $('yearGrid'); grid.innerHTML = '';
+  var frag = document.createDocumentFragment();
+  var hoy  = new Date();
+
+  for (var m = 0; m < 12; m++) {
+    var div = document.createElement('div'); div.className = 'mini-cal';
+    div.title = 'Obrir ' + MESOS[m] + ' en vista mensual';
+    div.onclick = (function(mm){ return function(){ cerrarVistaAnual(); setMes(anio, mm); window.scrollTo(0, 0); }; })(m);
+    var hdr = document.createElement('div'); hdr.className = 'mini-cal-hdr';
+    hdr.innerHTML = '<h4>' + MESOS[m] + '</h4>'; div.appendChild(hdr);
+    var body = document.createElement('div'); body.className = 'mini-cal-body';
+    var mg = document.createElement('div'); mg.className = 'mini-grid';
+    ['L','M','X','J','V','S','D'].forEach(function(l) {
+      var h2 = document.createElement('div'); h2.className = 'mh'; h2.textContent = l; mg.appendChild(h2);
+    });
+    var pd = new Date(anio, m, 1).getDay() || 7;
+    var dm = new Date(anio, m + 1, 0).getDate();
+    for (var bl = 1; bl < pd; bl++) mg.appendChild(document.createElement('div'));
+
+    for (var d2 = 1; d2 <= dm; d2++) {
+      var c = document.createElement('div'); c.className = 'md'; c.textContent = d2;
+      if (anio === hoy.getFullYear() && m === hoy.getMonth() && d2 === hoy.getDate()) c.classList.add('md-today');
+      var evsDia  = evsDelDia(anio, m, d2);
+      var torn    = evsDia.filter(function(x){ return x.tipo==='MATI'||x.tipo==='COMPLETO'||x.tipo==='ESPECIAL'; })[0];
+      var overlay = evsDia.filter(function(x){ return x.tipo==='LLIC'||x.tipo==='BAIXA'||x.tipo==='VA'||x.tipo==='EBEP'; })[0];
+      var fodes   = evsDia.filter(function(x){ return x.tipo==='FODES'; })[0];
+      var noHores = evsDia.filter(function(x){ return x.tipo==='FC'||x.tipo==='FS'||x.tipo==='FO'||x.tipo==='VE'||x.tipo==='APCH'; })[0];
+      var fest    = evsDia.filter(function(x){ return x.tipo==='FESTIVO'; })[0];
+      if (evsDia.filter(function(x){ return x.tipo==='CS'; })[0]) c.classList.add('hcs');
+      if (torn) {
+        c.classList.add(torn.tipo === 'MATI' ? 'hm' : torn.tipo === 'COMPLETO' ? 'hc' : 'he');
+      } else if (noHores) {
+        c.classList.add(noHores.tipo === 'FC' ? 'hvac' : noHores.tipo === 'FS' ? 'hfs'
+                      : noHores.tipo === 'FO' ? 'hfo'  : noHores.tipo === 'VE' ? 'hve' : 'hapch');
+      } else if (fest) c.classList.add('hf');
+      if (overlay) {
+        c.classList.add(overlay.tipo === 'LLIC' ? 'hll' : overlay.tipo === 'BAIXA' ? 'hbx'
+                      : overlay.tipo === 'VA'   ? 'hva' : 'hebep');
+      } else if (fodes) c.classList.add('hfodb');
+      mg.appendChild(c);
+    }
+    body.appendChild(mg); div.appendChild(body); frag.appendChild(div);
+  }
+  grid.appendChild(frag);
+}
+
+</script>
+</body>
+</html>
+
