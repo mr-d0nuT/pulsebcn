@@ -63,5 +63,40 @@ console.log('\n== cap de setmana a cavall de dos anys ==');
 d=setup([TORN(11,26),TORN(11,27)]);
 ok(d.resumen.caps===1, 'darrer cap de setmana complet de 2026 comptat', d.resumen.caps);
 
+
+console.log('\n== marca manual CS ==');
+const CS=(m,d)=>T(m,d,'CS','CS - Cap de setmana (150€)');
+// Gener 2026: dissabtes 3,10,17,24,31 · diumenges 4,11,18,25
+d = setup([CS(0,3),CS(0,4)]);
+ok(d.capsManual===true, 'amb una marca, el mode passa a manual');
+ok(d.resumen.caps===1 && d.resumen.capsMonto===150, 'ds+dg marcats → 1 cap, 150€', d.resumen.caps);
+
+ok(setup([CS(0,3)]).resumen.caps===0, 'només el dissabte marcat → no compta');
+ok(setup([CS(0,4)]).resumen.caps===0, 'només el diumenge marcat → no compta');
+
+console.log('\n== la marca no toca les hores ==');
+d = setup([TORN(0,5), CS(0,3), CS(0,4)]);
+ok(d.plan===6.5, 'les hores planificades només surten del torn', d.plan);
+ok(d.resumen.caps===1, 'i el cap de setmana marcat segueix comptant');
+
+console.log('\n== la marca mana per damunt de la detecció automàtica ==');
+// Ds 10 + dg 11 treballats (els detectaria l'automàtic) però marquem el 3+4
+d = setup([TORN(0,10),TORN(0,11), CS(0,3), CS(0,4)]);
+ok(d.resumen.caps===1, 'només compta el parell marcat, no el treballat', d.resumen.caps);
+ok(d.capsAuto.length===1 && d.capsAuto[0].ds==='2026-01-10', 'l\'automàtic segueix disponible com a suggeriment', d.capsAuto);
+ok(d.caps[0].ds==='2026-01-03', 'el que compta és el marcat', d.caps[0]);
+
+console.log('\n== sense cap marca es manté el càlcul automàtic ==');
+d = setup([TORN(0,10),TORN(0,11)]);
+ok(d.capsManual===false && d.resumen.caps===1, 'cau al mode automàtic', {m:d.capsManual,c:d.resumen.caps});
+
+console.log('\n== una marca no invalida el cap de setmana per a l\'automàtic ==');
+d = setup([TORN(0,10),TORN(0,11), CS(0,10)]);
+ok(d.capsAuto.length===1, 'CS no compta com a absència en el càlcul automàtic', d.capsAuto.length);
+
+console.log('\n== la marca conviu amb el torn al mateix dia ==');
+d = setup([TORN(0,3), CS(0,3)]);
+ok(d.byDay['0_3'].length===2, 'el dia té torn i marca alhora', d.byDay['0_3'].map(e=>e.tipo));
+
 console.log(fails?`\n${fails} PROVES FALLIDES\n`:'\nTOTES LES PROVES PASSEN\n');
 process.exit(fails?1:0);

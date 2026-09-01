@@ -131,6 +131,28 @@ i al resum de la vista anual (i per tant també a la impressió). Tocant el bàn
 s'obre el detall amb la llista de caps de setmana que compten, agrupats per mes,
 per poder-ho contrastar amb la nòmina.
 
+### 12. Marca de cap de setmana (CS)
+
+Una eina de pintar, no un tipus de dia: **només ombreja**. No suma ni resta cap
+hora — l'event que crea no porta `Horario:` a la descripció, que és l'única
+cosa d'on surten les hores — i té **grup propi** (`MARCA`), de manera que no
+substitueix el torn ni cap absència: s'hi superposa.
+
+Es dibuixa com una trama diagonal rosa amb un anell del mateix color, per sobre
+del color que ja tingui el dia. Així es distingeix d'un dia pintat encara que a
+sota hi hagi un torn blau o unes vacances verdes.
+
+Serveix per decidir a mà quins caps de setmana entren a la prima de 150 €:
+
+- Si l'any **no té cap marca**, la prima es compta automàticament com fins ara
+  (dissabte i diumenge amb torn i sense cap absència).
+- En el moment que n'hi ha **una de sola**, manen les marques: compta cada
+  parell dissabte + diumenge marcats. El bàner diu sempre quin dels dos modes
+  està actiu, així que el número no canvia mai sense explicació.
+- El full de detall ofereix **«Marcar els N que surten treballats»**, que
+  converteix la detecció automàtica en marques reals d'un sol toc, per després
+  afegir-ne o treure'n una a una.
+
 ### Correcció addicional: festius mòbils de qualsevol any
 
 `festivosFijos()` tenia el Divendres Sant, el Dilluns de Pasqua i el Dilluns de

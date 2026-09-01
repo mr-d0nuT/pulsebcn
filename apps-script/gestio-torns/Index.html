@@ -965,6 +965,53 @@ body{
 }
 .btn-reintent:active{ transform:scale(.95); }
 
+/* ==========================================================================
+   v2 — MARCA DE CAP DE SETMANA (CS)
+   Un sombrejat que es dibuixa PER SOBRE del dia, sense substituir-ne el color
+   ni tocar-ne les hores. Serveix només per comptar la prima de 150 €.
+   La trama diagonal es distingeix d'un color pla encara que el dia ja estigui
+   pintat de blau, verd o rosa.
+   ========================================================================== */
+:root{ --cs:#F50057; --cs-d:#C51162; --cs-bg:#FCE4EC; }
+:root[data-theme="dark"]{ --cs:#FF5C8A; --cs-d:#FF8FB0; --cs-bg:#2E1520; }
+
+.day-cell .cs-wash{
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+  border-radius:inherit;
+  background:repeating-linear-gradient(135deg,
+    rgba(245,0,87,.42) 0 5px, rgba(245,0,87,0) 5px 11px);
+  box-shadow:inset 0 0 0 2.5px rgba(245,0,87,.9);
+}
+/* El número i les icones han de quedar per damunt del sombrejat */
+.day-cell.has-cs > span,
+.day-cell.has-cs .ev-icon,
+.day-cell.has-cs .ev-lbl{ position:relative; z-index:1; }
+/* Un dia només marcat (sense torn) ha de tenir prou cos per veure's */
+.day-cell.has-cs:not([class*="cell-"]){ background:var(--cs-bg); }
+
+.ev-card.cs{ border-color:var(--cs); background:var(--cs-bg); }
+.leg.lc-cs{ color:var(--cs-d); }
+.t-cs{ background:linear-gradient(135deg,#FF4081,var(--cs-d)); }
+
+/* Vista anual i impressió */
+.md.hcs{ box-shadow:inset 0 0 0 2px #F50057; }
+
+/* Full de detall: com s'està comptant i com passar a marcar-ho a mà */
+.caps-mode{
+  font-size:12.5px; line-height:1.55; color:var(--txt2);
+  padding:14px 20px 0;
+}
+.caps-mode b{ color:var(--txt); font-weight:700; }
+.btn-marcar-caps{
+  display:block; width:calc(100% - 40px); margin:14px 20px 4px;
+  padding:12px 16px; border:none; border-radius:12px;
+  background:linear-gradient(135deg,#FF4081,var(--cs-d)); color:#fff;
+  font-size:13.5px; font-weight:800; cursor:pointer; font-family:inherit;
+  box-shadow:0 3px 12px rgba(197,17,98,.32);
+  -webkit-tap-highlight-color:transparent; transition:transform .12s var(--spring);
+}
+.btn-marcar-caps:active{ transform:scale(.97); }
+
 </style>
 </head>
 <body>
@@ -1187,7 +1234,8 @@ body{
   <div class="leg lc-fs"   id="leg-fs"   onclick="toggleModo('FS')"><div class="leg-dot" style="background:var(--fs)"></div>FS</div>
   <div class="leg lc-fo"   id="leg-fo"   onclick="toggleModo('FO')"><div class="leg-dot" style="background:var(--fo)"></div>FO</div>
   <div class="leg lc-fod"  id="leg-fod"  onclick="toggleModo('FODES')"><div class="leg-dot" style="background:var(--fod)"></div>FO/DES</div>
-  <div class="leg lc-bor"  id="leg-bor"  onclick="toggleModo('BORRAR')"><div class="leg-dot" style="background:var(--fest)"></div>Borrar</div>
+  <div class="leg lc-cs"  id="leg-cs"  onclick="toggleModo('CS')"><div class="leg-dot" style="background:var(--cs)"></div>CS 150€</div>
+<div class="leg lc-bor"  id="leg-bor"  onclick="toggleModo('BORRAR')"><div class="leg-dot" style="background:var(--fest)"></div>Borrar</div>
   <div class="leg lc-fes"><div class="leg-dot" style="background:#EF5350"></div>Festiu✶</div>
 </div>
 
@@ -1302,6 +1350,10 @@ body{
     <button id="btn-fo" class="tbtn t-fo" onclick="toggleModo('FO')">
       <svg viewBox="0 0 24 24"><path d="M11.5 2C6.81 2 3 5.81 3 10.5S6.81 19 11.5 19h.5v3c4.86-2.34 8-7 8-11.5C20 5.81 16.19 2 11.5 2zm1 14.5h-2v-2h2v2zm0-4h-2c0-3.25 3-3 3-5 0-1.1-.9-2-2-2s-2 .9-2 2h-2c0-2.21 1.79-4 4-4s4 1.79 4 4c0 2.5-3 2.75-3 5z"/></svg>
       <span class="tlbl">FO</span>
+    </button>
+    <button id="btn-cs" class="tbtn t-cs" onclick="toggleModo('CS')" title="Marcar cap de setmana per als 150€">
+      <svg viewBox="0 0 24 24"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 0 0-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 0 0 0-1.41z"/></svg>
+      <span class="tlbl">CS</span>
     </button>
     <button id="btn-fod" class="tbtn t-fod" onclick="toggleModo('FODES')">
       <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
@@ -1459,6 +1511,7 @@ body{
       <div class="yl"><div class="yl-dot" style="background:#607D8B"></div>FS</div>
       <div class="yl"><div class="yl-dot" style="background:#F4511E"></div>FO</div>
       <div class="yl"><div class="yl-dot" style="background:#FFF9C4;border:2px solid #F9A825"></div>FO/DES✶</div>
+      <div class="yl"><div class="yl-dot" style="background:transparent;box-shadow:inset 0 0 0 3px #F50057"></div>CS 150€</div>
       <div class="yl"><div class="yl-dot" style="background:#EF5350"></div>Festiu auto</div>
       <div style="font-size:9px;color:#9E9E9E;align-self:center">✶ franja superior</div>
     </div>
@@ -1553,7 +1606,9 @@ var MODO_CFG = {
   FC:      function(){ return {titulo:'FC',                descripcion:'Festes Ajust Hores Conveni',              colorId:2}; },
   FS:      function(){ return {titulo:'FS - Festiu Setmanal',  descripcion:'Festiu Setmanal',                     colorId:8}; },
   FO:      function(){ return {titulo:'FO - Festiu Oficial',   descripcion:'Festiu Oficial',                      colorId:6}; },
-  FODES:   function(){ return {titulo:'FO/DES',                descripcion:'Festiu Oficial amb descompte (150€)', colorId:5}; }
+  FODES:   function(){ return {titulo:'FO/DES',                descripcion:'Festiu Oficial amb descompte (150€)', colorId:5}; },
+  // Marca visual: no porta "Horario:", per tant no suma ni resta cap hora
+  CS:      function(){ return {titulo:'CS - Cap de setmana (150€)', descripcion:'Marca per a la prima de cap de setmana. No compta hores.', colorId:4}; }
 };
 
 var TIPO_INFO = {
@@ -1570,10 +1625,11 @@ var TIPO_INFO = {
   FS:      {cls:'fs',    ic:'📅',  label:'Festiu Setmanal'},
   FO:      {cls:'fo',    ic:'🔴',  label:'Festiu Oficial'},
   FODES:   {cls:'fodes', ic:'💰',  label:'FO/DES (+150€)'},
+  CS:      {cls:'cs',    ic:'🌸',  label:'Cap de setmana (150€)'},
   FESTIVO: {cls:'fest',  ic:'🎉',  label:'Festiu'}
 };
 
-var TIPOS_GESTIONABLES = ['MATI','COMPLETO','ESPECIAL','LLIC','BAIXA','VE','APCH','VA','EBEP','FC','FS','FO','FODES'];
+var TIPOS_GESTIONABLES = ['MATI','COMPLETO','ESPECIAL','LLIC','BAIXA','VE','APCH','VA','EBEP','FC','FS','FO','FODES','CS'];
 
 /* Prima per cap de setmana treballat sencer (dissabte + diumenge), que es
    cobra l'any següent. Un dia només compta si té torn i CAP altra marca:
@@ -1588,14 +1644,15 @@ var BOLSA_TYPES        = ['VE','APCH','VA','EBEP'];
 var GRUPS = {
   TORN:    ['MATI','COMPLETO','ESPECIAL'],
   OVERLAY: ['LLIC','BAIXA','VA','EBEP'],
-  NOHORES: ['FC','FS','FO','FODES','VE','APCH']
+  NOHORES: ['FC','FS','FO','FODES','VE','APCH'],
+  MARCA:   ['CS']          // només pinta: conviu amb tot i no toca les hores
 };
 function grupoDe(tipo) {
   for (var g in GRUPS) if (GRUPS[g].indexOf(tipo) !== -1) return g;
   return null;
 }
-var APP_PREFIX = ['Trabajo','FS -','FO -','FO/DES','AP/CH','Vacances'];
-var APP_EXACT  = ['LLIC','BAIXA','FC','VE','VA','EBEP'];
+var APP_PREFIX = ['Trabajo','FS -','FO -','FO/DES','AP/CH','Vacances','CS -'];
+var APP_EXACT  = ['LLIC','BAIXA','FC','VE','VA','EBEP','CS'];
 function esEventApp(titulo) {
   var t = String(titulo || '').trim();
   for (var i = 0; i < APP_PREFIX.length; i++) if (t.indexOf(APP_PREFIX[i]) === 0) return true;
@@ -1808,30 +1865,42 @@ function derivar(anio) {
   var esFestiu = {};
   (p.festivos || []).forEach(function(f) { esFestiu[f.mes + '_' + f.dia] = 1; });
 
-  var caps = [];
+  /* Marques manuals (tipus CS). Si n'hi ha alguna a l'any, manen elles:
+     l'usuari sap millor que cap regla quins caps de setmana li paguen. Si no
+     n'hi ha cap, es fa servir la detecció automàtica, com fins ara. */
+  var marcat = {};
+  (p.eventos || []).forEach(function(e) { if (e.t === 'CS') marcat[e.m + '_' + e.d] = 1; });
+  var hiHaMarques = false;
+  for (var kk in marcat) { hiHaMarques = true; break; }
+
+  var caps = [], capsAuto = [];
   var ds = new Date(anio, 0, 1);
   ds.setDate(ds.getDate() + ((6 - ds.getDay() + 7) % 7));           // primer dissabte de l'any
   while (ds.getFullYear() === anio) {
     var dg = new Date(ds.getTime()); dg.setDate(dg.getDate() + 1);  // el diumenge següent
-    // Un cap de setmana a cavall de dos anys es comptabilitza a l'any del diumenge
+    // Els parells que creuen el canvi d'any (dissabte 31/12 + diumenge 1/1) no
+    // es compten: el diumenge és a les dades de l'any següent, i barrejar-les
+    // faria que l'import canviés segons si aquell any ja s'ha carregat o no.
     if (dg.getFullYear() === anio) {
       var ks = ds.getMonth() + '_' + ds.getDate();
       var kg = dg.getMonth() + '_' + dg.getDate();
-      if (treballat(ds.getMonth(), ds.getDate()) && !esFestiu[ks] &&
-          treballat(dg.getMonth(), dg.getDate()) && !esFestiu[kg]) {
-        caps.push({
-          ds: iso(anio, ds.getMonth(), ds.getDate()),
-          dg: iso(anio, dg.getMonth(), dg.getDate()),
-          mes: ds.getMonth()
-        });
-      }
+      var parell = {
+        ds:  iso(anio, ds.getMonth(), ds.getDate()),
+        dg:  iso(anio, dg.getMonth(), dg.getDate()),
+        mes: ds.getMonth()
+      };
+      var auto = treballat(ds.getMonth(), ds.getDate()) && !esFestiu[ks] &&
+                 treballat(dg.getMonth(), dg.getDate()) && !esFestiu[kg];
+      if (auto) capsAuto.push(parell);
+      if (hiHaMarques ? (marcat[ks] && marcat[kg]) : auto) caps.push(parell);
     }
     ds.setDate(ds.getDate() + 7);
   }
   resumen.caps      = caps.length;
   resumen.capsMonto = caps.length * CAP_SETMANA_EUROS;
 
-  DERIV[anio] = { byDay: byDay, resumen: resumen, plan: plan, real: real, caps: caps };
+  DERIV[anio] = { byDay: byDay, resumen: resumen, plan: plan, real: real,
+                  caps: caps, capsAuto: capsAuto, capsManual: hiHaMarques, marcat: marcat };
 
   if (anio === anioV) {
     bolsaTotals = p.bolsas || bolsaTotals;
@@ -2221,6 +2290,15 @@ function buildGrid() {
       addCellIcon(cell, TIPO_INFO.FODES.ic, fodes.titulo);
     }
 
+    /* 1b. Marca de cap de setmana: un sombrejat per sobre, sense tocar
+           ni el color de fons ni la icona del dia. */
+    if (evsDia.filter(function(ev){ return ev.tipo === 'CS'; })[0]) {
+      cell.classList.add('has-cs');
+      var wash = document.createElement('div');
+      wash.className = 'cs-wash';
+      cell.appendChild(wash);
+    }
+
     /* 2. Franja superior: LLIC/BAIXA/VA/EBEP sobre torn, o FO/DES sempre */
     if (torn && overlay) {
       cell.classList.add(overlay.tipo === 'LLIC' ? 'has-llic' : overlay.tipo === 'BAIXA' ? 'has-bxa'
@@ -2365,14 +2443,14 @@ function refreshSelButtons() {
 }
 
 /* ===================== MODES ===================== */
-var ALL_BTN_IDS = ['btn-mat','btn-com','btn-esp','btn-bor','btn-llic','btn-bxa','btn-ve','btn-apch','btn-va','btn-ebep','btn-fc','btn-fs','btn-fo','btn-fod'];
-var ALL_LEG_IDS = ['leg-mati','leg-comp','leg-esp','leg-llic','leg-bxa','leg-ve','leg-apch','leg-va','leg-ebep','leg-fc','leg-fs','leg-fo','leg-fod','leg-bor'];
+var ALL_BTN_IDS = ['btn-mat','btn-com','btn-esp','btn-bor','btn-llic','btn-bxa','btn-ve','btn-apch','btn-va','btn-ebep','btn-fc','btn-fs','btn-fo','btn-fod','btn-cs'];
+var ALL_LEG_IDS = ['leg-mati','leg-comp','leg-esp','leg-llic','leg-bxa','leg-ve','leg-apch','leg-va','leg-ebep','leg-fc','leg-fs','leg-fo','leg-fod','leg-cs','leg-bor'];
 var MODO_TO_BTN = { MATI:'btn-mat', COMPLETO:'btn-com', ESPECIAL:'btn-esp', BORRAR:'btn-bor',
   LLIC:'btn-llic', BAIXA:'btn-bxa', VE:'btn-ve', APCH:'btn-apch', VA:'btn-va', EBEP:'btn-ebep',
-  FC:'btn-fc', FS:'btn-fs', FO:'btn-fo', FODES:'btn-fod' };
+  FC:'btn-fc', FS:'btn-fs', FO:'btn-fo', FODES:'btn-fod', CS:'btn-cs' };
 var MODO_TO_LEG = { MATI:'leg-mati', COMPLETO:'leg-comp', ESPECIAL:'leg-esp', BORRAR:'leg-bor',
   LLIC:'leg-llic', BAIXA:'leg-bxa', VE:'leg-ve', APCH:'leg-apch', VA:'leg-va', EBEP:'leg-ebep',
-  FC:'leg-fc', FS:'leg-fs', FO:'leg-fo', FODES:'leg-fod' };
+  FC:'leg-fc', FS:'leg-fs', FO:'leg-fo', FODES:'leg-fod', CS:'leg-cs' };
 var MODO_LABELS = {
   MATI:     function(){ return '☀️ Matí ' + cfgMati.ini + '→' + cfgMati.fin; },
   COMPLETO: function(){ return '🌙 Complet ' + cfgComp.ini + '→' + cfgComp.fin; },
@@ -2387,13 +2465,14 @@ var MODO_LABELS = {
   FS:       function(){ return '📅 FS — Festiu Setmanal'; },
   FO:       function(){ return '🔴 FO — Festiu Oficial'; },
   FODES:    function(){ return '💰 FO/DES — festiu oficial amb 150€'; },
+  CS:       function(){ return '🌸 Marca de cap de setmana — només pinta, no toca les hores'; },
   BORRAR:   function(){ return '🗑️ Dies a eliminar'; }
 };
 var MODO_COLORS = {
   MATI:'#0288D1',COMPLETO:'#3949AB',ESPECIAL:'#7B1FA2',
   LLIC:'#C2185B',BAIXA:'#AD1457',
   VE:'#2E7D32',APCH:'#558B2F',VA:'#4E342E',EBEP:'#006064',
-  FC:'#00695C',FS:'#37474F',FO:'#BF360C',FODES:'#F57F17',BORRAR:'#E53935'
+  FC:'#00695C',FS:'#37474F',FO:'#BF360C',FODES:'#F57F17',CS:'#C51162',BORRAR:'#E53935'
 };
 
 function toggleModo(m) {
@@ -2646,6 +2725,7 @@ function showInfo(dia) {
     d.innerHTML = '<div class="evc-icon">' + info.ic + '</div><div class="evc-info"><div class="evc-title">' + esc(ev.titulo) + '</div>' +
       (grupoDe(ev.tipo) === 'TORN' ? '<div class="evc-time">⏱ ' + esc(ev.horario) + '</div>' : '') +
       (ev.tipo === 'FODES' ? '<div class="evc-money">💰 +150€ compensació</div>' : '') +
+      (ev.tipo === 'CS' ? '<div class="evc-time">🌸 Només marca — no compta hores</div>' : '') +
       (['VA','EBEP','LLIC','BAIXA'].indexOf(ev.tipo) !== -1 ? '<div class="evc-time">✓ Compta com a treballat</div>' : '') +
       '</div>';
     if (TIPOS_GESTIONABLES.indexOf(ev.tipo) !== -1) {
@@ -2837,9 +2917,37 @@ function renderCaps() {
   $('capsBar').classList.toggle('buit', n === 0);
   $('xCaps').textContent    = n + (n === 1 ? ' cap setm.' : ' caps setm.');
   $('xCapsEur').textContent = '· ' + eur + '€';
+  var com = d.capsManual ? 'marcats a mà' : 'detectats automàticament';
   $('capsSub').textContent = n === 0
-    ? 'Cap encara — cal dissabte i diumenge treballats sencers'
-    : n + (n === 1 ? ' cap de setmana complet' : ' caps de setmana complets') + ' × ' + CAP_SETMANA_EUROS + '€';
+    ? (d.capsManual ? 'Cap parell complet marcat encara' : 'Cap encara — cal dissabte i diumenge treballats sencers')
+    : n + (n === 1 ? ' cap de setmana ' : ' caps de setmana ') + com + ' × ' + CAP_SETMANA_EUROS + '€';
+}
+
+/* Passa la detecció automàtica a marques reals al calendari, perquè després
+   l'usuari les pugui ajustar una a una. */
+function marcarCapsAuto() {
+  var d = DERIV[anioV];
+  if (!d) return;
+  var vist = {}, fechas = [];
+  d.capsAuto.forEach(function(c) {
+    [c.ds, c.dg].forEach(function(f) {
+      var pr = f.split('-'), k = (+pr[1] - 1) + '_' + (+pr[2]);
+      if (d.marcat[k] || vist[f]) return;
+      vist[f] = 1; fechas.push(f);
+    });
+  });
+  if (!fechas.length) { toast('Ja estan tots marcats', 'info'); return; }
+  var cfg = MODO_CFG.CS();
+  operar({
+    anio: anioV, fechas: fechas,
+    msg: '🌸 ' + fechas.length + ' dies marcats',
+    mutar: function(){ return mutarLocal(anioV, fechas, 'CS', cfg); },
+    crida: function(ok, ko) {
+      google.script.run.withSuccessHandler(ok).withFailureHandler(ko)
+        .procesarListaDias({ fechas: fechas, accion: 'CS', calendarId: calId, anioVista: anioV,
+                             titulo: cfg.titulo, descripcion: cfg.descripcion, colorId: cfg.colorId });
+    }
+  });
 }
 
 /* Detall: quins caps de setmana compten, per poder-ho contrastar amb la nòmina */
@@ -2850,10 +2958,33 @@ function mostrarCaps() {
   $('capsSheetTitle').textContent = '💶 Caps de setmana ' + anioV + ' → es cobren el ' + (anioV + 1);
   var cont = $('capsList'); cont.innerHTML = '';
 
+  var mode = document.createElement('div');
+  mode.className = 'caps-mode';
+  mode.innerHTML = d.capsManual
+    ? '🌸 Es compten els caps de setmana que has <b>marcat a mà</b>. Fes servir l\'eina 🌸 per afegir-ne o treure\'n.'
+    : 'Ara es compten <b>automàticament</b>: dissabte i diumenge amb torn i sense cap absència. Amb l\'eina 🌸 pots decidir-ho tu.';
+  cont.appendChild(mode);
+
+  var pendents = (d.capsAuto || []).filter(function(c) {
+    var a = c.ds.split('-'), b = c.dg.split('-');
+    return !(d.marcat[(+a[1] - 1) + '_' + (+a[2])] && d.marcat[(+b[1] - 1) + '_' + (+b[2])]);
+  });
+  if (pendents.length) {
+    var bm = document.createElement('button');
+    bm.className = 'btn-marcar-caps';
+    bm.textContent = '🌸 Marcar els ' + pendents.length + ' que surten treballats';
+    bm.onclick = function(){ cerrarCapsSheet(); marcarCapsAuto(); };
+    cont.appendChild(bm);
+  }
+
   if (!caps.length) {
-    cont.innerHTML = '<div class="caps-empty">Encara no hi ha cap cap de setmana complet.<br>' +
-      'Compten els que tenen <b>dissabte i diumenge</b> amb torn i sense cap absència ' +
-      '(baixa, llicència, AP/CH, VE, VA, EBEP, FC, FS, FO o festiu oficial).</div>';
+    var buit = document.createElement('div');
+    buit.className = 'caps-empty';
+    buit.innerHTML = d.capsManual
+      ? 'Cap parell complet. Cal marcar <b>el dissabte i el diumenge</b> del mateix cap de setmana.'
+      : 'Encara no n\'hi ha cap. Compten els que tenen <b>dissabte i diumenge</b> amb torn i sense cap absència ' +
+        '(baixa, llicència, AP/CH, VE, VA, EBEP, FC, FS, FO o festiu oficial).';
+    cont.appendChild(buit);
   } else {
     var perMes = {};
     caps.forEach(function(c) { (perMes[c.mes] = perMes[c.mes] || []).push(c); });
@@ -3190,6 +3321,7 @@ function pintarVistaAnual(anio) {
       var fodes   = evsDia.filter(function(x){ return x.tipo==='FODES'; })[0];
       var noHores = evsDia.filter(function(x){ return x.tipo==='FC'||x.tipo==='FS'||x.tipo==='FO'||x.tipo==='VE'||x.tipo==='APCH'; })[0];
       var fest    = evsDia.filter(function(x){ return x.tipo==='FESTIVO'; })[0];
+      if (evsDia.filter(function(x){ return x.tipo==='CS'; })[0]) c.classList.add('hcs');
       if (torn) {
         c.classList.add(torn.tipo === 'MATI' ? 'hm' : torn.tipo === 'COMPLETO' ? 'hc' : 'he');
       } else if (noHores) {

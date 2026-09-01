@@ -60,6 +60,8 @@ function detectarTipo(titulo) {
   // Dies sense hores laborables (generals)
   // 'fc' = nou nom; 'vacances' = compatibilitat amb events antics del calendari
   if (t === 'fc' || t.startsWith('fc ') || t === 'vacances' || t.startsWith('vacances')) return 'FC';
+  // Marca de cap de setmana: només pinta i compta per a la prima de 150 €
+  if (t.startsWith('cs -') || t === 'cs')                                   return 'CS';
   if (t.startsWith('fs -') || t === 'fs')                                   return 'FS';
   if (t.startsWith('fo/des') || t === 'fo/des')                             return 'FODES';
   if (t.startsWith('fo -') || t === 'fo')                                   return 'FO';
@@ -71,10 +73,14 @@ function detectarTipo(titulo) {
 }
 
 // Grups funcionals: un dia només pot tenir un event de cada grup
+// La marca de cap de setmana té grup propi a posta: així no substitueix el
+// torn ni cap absència del dia, només s'hi superposa. I com que no porta
+// "Horario:" a la descripció, no suma ni resta cap hora.
 var GRUPS = {
   TORN:    ['MATI', 'COMPLETO', 'ESPECIAL'],
   OVERLAY: ['LLIC', 'BAIXA', 'VA', 'EBEP'],
-  NOHORES: ['FC', 'FS', 'FO', 'FODES', 'VE', 'APCH']
+  NOHORES: ['FC', 'FS', 'FO', 'FODES', 'VE', 'APCH'],
+  MARCA:   ['CS']
 };
 function grupoDe(tipo) {
   for (var g in GRUPS) if (GRUPS[g].indexOf(tipo) !== -1) return g;
@@ -84,8 +90,8 @@ function grupoDe(tipo) {
 // Títols que crea l'app (per a BORRAR i anti-duplicats).
 // Els codis curts exigeixen coincidència exacta o seguida d'espai,
 // per no tocar events personals com "VERBENA" o "FCB - partit".
-var APP_PREFIX = ['Trabajo', 'FS -', 'FO -', 'FO/DES', 'AP/CH', 'Vacances'];
-var APP_EXACT  = ['LLIC', 'BAIXA', 'FC', 'VE', 'VA', 'EBEP'];
+var APP_PREFIX = ['Trabajo', 'FS -', 'FO -', 'FO/DES', 'AP/CH', 'Vacances', 'CS -'];
+var APP_EXACT  = ['LLIC', 'BAIXA', 'FC', 'VE', 'VA', 'EBEP', 'CS'];
 function esEventApp(titulo) {
   var t = String(titulo || '').trim();
   for (var i = 0; i < APP_PREFIX.length; i++) if (t.indexOf(APP_PREFIX[i]) === 0) return true;
