@@ -975,26 +975,43 @@ body{
 :root{ --cs:#F50057; --cs-d:#C51162; --cs-bg:#FCE4EC; }
 :root[data-theme="dark"]{ --cs:#FF5C8A; --cs-d:#FF8FB0; --cs-bg:#2E1520; }
 
+/* Mitja cel·la: una diagonal parteix el dia en dos triangles i només se
+   n'ombreja el de baix a l'esquerra. La franja de dalt (LLIC, FO/DES…) i el
+   punt d'avui queden lliures. */
 .day-cell .cs-wash{
   position:absolute; inset:0; z-index:0; pointer-events:none;
   border-radius:inherit;
-  background:repeating-linear-gradient(135deg,
-    rgba(245,0,87,.42) 0 5px, rgba(245,0,87,0) 5px 11px);
-  box-shadow:inset 0 0 0 2.5px rgba(245,0,87,.9);
+  background:
+    /* la ratlla diagonal */
+    linear-gradient(to top right,
+      transparent calc(50% - 1.3px),
+      rgba(197,17,98,.95) calc(50% - 1.3px) calc(50% + 1.3px),
+      transparent calc(50% + 1.3px)),
+    /* el triangle inferior esquerre */
+    linear-gradient(to top right, rgba(245,0,87,.62) 0 50%, transparent 50%);
 }
 /* El número i les icones han de quedar per damunt del sombrejat */
 .day-cell.has-cs > span,
 .day-cell.has-cs .ev-icon,
 .day-cell.has-cs .ev-lbl{ position:relative; z-index:1; }
-/* Un dia només marcat (sense torn) ha de tenir prou cos per veure's */
-.day-cell.has-cs:not([class*="cell-"]){ background:var(--cs-bg); }
+/* Punt de la llegenda, amb la mateixa forma de mig quadrat */
+.leg-dot.dot-cs{
+  background:linear-gradient(to top right, var(--cs) 0 50%, transparent 50%);
+  box-shadow:inset 0 0 0 1px var(--cs);
+}
 
 .ev-card.cs{ border-color:var(--cs); background:var(--cs-bg); }
 .leg.lc-cs{ color:var(--cs-d); }
 .t-cs{ background:linear-gradient(135deg,#FF4081,var(--cs-d)); }
 
-/* Vista anual i impressió */
-.md.hcs{ box-shadow:inset 0 0 0 2px #F50057; }
+/* Vista anual i impressió: la mateixa mitja cel·la, a escala petita.
+   Es pinta com a background-image i no com a ::after perquè el número del dia
+   quedi per damunt; els colors de fons dels mini-dies són plans, així que
+   substituir només la imatge no en canvia el color. */
+.md.hcs{
+  background-image:linear-gradient(to top right,
+    rgba(245,0,87,.75) 0 50%, transparent 50%)!important;
+}
 
 /* Full de detall: com s'està comptant i com passar a marcar-ho a mà */
 .caps-mode{
@@ -1234,7 +1251,7 @@ body{
   <div class="leg lc-fs"   id="leg-fs"   onclick="toggleModo('FS')"><div class="leg-dot" style="background:var(--fs)"></div>FS</div>
   <div class="leg lc-fo"   id="leg-fo"   onclick="toggleModo('FO')"><div class="leg-dot" style="background:var(--fo)"></div>FO</div>
   <div class="leg lc-fod"  id="leg-fod"  onclick="toggleModo('FODES')"><div class="leg-dot" style="background:var(--fod)"></div>FO/DES</div>
-  <div class="leg lc-cs"  id="leg-cs"  onclick="toggleModo('CS')"><div class="leg-dot" style="background:var(--cs)"></div>CS 150€</div>
+  <div class="leg lc-cs"  id="leg-cs"  onclick="toggleModo('CS')"><div class="leg-dot dot-cs"></div>CS 150€</div>
 <div class="leg lc-bor"  id="leg-bor"  onclick="toggleModo('BORRAR')"><div class="leg-dot" style="background:var(--fest)"></div>Borrar</div>
   <div class="leg lc-fes"><div class="leg-dot" style="background:#EF5350"></div>Festiu✶</div>
 </div>
@@ -1511,7 +1528,7 @@ body{
       <div class="yl"><div class="yl-dot" style="background:#607D8B"></div>FS</div>
       <div class="yl"><div class="yl-dot" style="background:#F4511E"></div>FO</div>
       <div class="yl"><div class="yl-dot" style="background:#FFF9C4;border:2px solid #F9A825"></div>FO/DES✶</div>
-      <div class="yl"><div class="yl-dot" style="background:transparent;box-shadow:inset 0 0 0 3px #F50057"></div>CS 150€</div>
+      <div class="yl"><div class="yl-dot" style="background:linear-gradient(to top right,#F50057 0 50%,transparent 50%);box-shadow:inset 0 0 0 1px #F50057"></div>CS 150€</div>
       <div class="yl"><div class="yl-dot" style="background:#EF5350"></div>Festiu auto</div>
       <div style="font-size:9px;color:#9E9E9E;align-self:center">✶ franja superior</div>
     </div>

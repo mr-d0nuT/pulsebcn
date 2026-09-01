@@ -138,9 +138,11 @@ hora — l'event que crea no porta `Horario:` a la descripció, que és l'única
 cosa d'on surten les hores — i té **grup propi** (`MARCA`), de manera que no
 substitueix el torn ni cap absència: s'hi superposa.
 
-Es dibuixa com una trama diagonal rosa amb un anell del mateix color, per sobre
-del color que ja tingui el dia. Així es distingeix d'un dia pintat encara que a
-sota hi hagi un torn blau o unes vacances verdes.
+Una diagonal parteix el dia en dos triangles i només se n'ombreja el de baix a
+l'esquerra, en rosa. Així la meitat de la cel·la segueix mostrant el color real
+del dia — un torn blau, unes vacances verdes — i es veu d'un cop d'ull què hi ha
+a sota i que a més està marcat. La franja superior (LLIC, FO/DES…) i el punt
+d'avui queden lliures. La vista anual i la impressió fan servir la mateixa forma.
 
 Serveix per decidir a mà quins caps de setmana entren a la prima de 150 €:
 
