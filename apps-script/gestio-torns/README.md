@@ -1,0 +1,127 @@
+# Gestió Torns — v2
+
+Reescriptura de l'aplicació d'Apps Script **«Calendario fiestas FSC CCOO»**
+(_Gestió Torns_), centrada en dues coses: que la interfície no faci esperar mai
+l'usuari i que sigui més clara de llegir i de fer servir.
+
+## Com aplicar-ho al projecte d'Apps Script
+
+Els fitxers d'aquesta carpeta es corresponen un a un amb els del projecte:
+
+| Fitxer aquí        | Fitxer a l'editor d'Apps Script |
+| ------------------ | ------------------------------- |
+| `Code.gs`          | `code.gs`                       |
+| `Index.html`       | `Index.html`                    |
+| `appsscript.json`  | `appsscript.json` (sense canvis)|
+
+Substitueix el contingut de cada fitxer i torna a desplegar la web app
+(**Desplegar → Gestionar desplegaments → editar → Versió nova**). No cal tocar
+cap permís ni cap servei: s'utilitzen exactament les mateixes API que abans.
+
+> El primer cop que s'obri després d'actualitzar, la memòria cau local encara és
+> buida i la càrrega serà com sempre. A partir d'aleshores arrenca amb dades a
+> pantalla immediatament.
+
+## Què ha canviat
+
+### 1. Una crida per any en comptes de tretze
+
+Abans cada mes que miraves era una consulta al servidor (`obtenerEventosMes`),
+i a sobre les estadístiques (`obtenerResumenAnual`) i la vista anual
+(`obtenerVistaAnual`) tornaven a llegir l'any sencer del calendari.
+
+Ara `obtenerAnyComplet(any, calendari)` retorna en una sola resposta els events,
+els torns amb horari, els festius, la bolsa i la configuració. El client en
+deriva els mesos, els comptadors, les hores i la vista anual **sense tornar a
+parlar amb el servidor**. Canviar de mes passa a ser instantani per sempre.
+
+### 2. Arrencada en calent
+
+L'últim any consultat es desa a `localStorage`. En obrir l'aplicació es pinta
+immediatament amb aquestes dades i es revalida en segon pla (_stale while
+revalidate_); un punt taronja al capçal indica que el que veus encara és local.
+Abans hi havia dues crides encadenades — calendaris i després events — abans de
+veure res; ara `arrancar()` les fusiona en una.
+
+### 3. Escriptures optimistes amb «Desfés»
+
+Desar dies feia tres viatges seguits al servidor: desar → recarregar el mes →
+recarregar les estadístiques, i entremig la graella es buidava.
+
+Ara el canvi s'aplica a la còpia local i es pinta a l'instant; la crida va en
+segon pla i la resposta ja porta el payload refrescat. Si falla, es recupera
+l'estat anterior. Cada operació mostra un avís amb **Desfés**, que restaura
+exactament els events que hi havia (`restaurarDies`).
+
+### 4. El servidor llegeix el calendari una sola vegada per operació
+
+`procesarListaDias` feia una consulta `getEvents` **per cada dia seleccionat**.
+Marcar 20 dies eren 20 consultes. Ara es llegeix tot el rang de cop i s'agrupa
+per dia en memòria.
+
+A més, el payload anual es guarda a `CacheService` amb una clau que inclou una
+versió de dades que s'incrementa a cada escriptura, de manera que la memòria cau
+s'invalida sola sense TTL curts.
+
+### 5. Seleccionar dies arrossegant el dit
+
+En mode selecció es poden pintar dies arrossegant per la graella, amb una
+resposta hàptica per dia. També hi ha una barra de selecció ràpida:
+**Tot el mes · Dl–Dv · Caps de setmana · Dies lliures · Cap**.
+
+### 6. Res de diàlegs del navegador
+
+`confirm()` i `alert()` (que en un iframe d'Apps Script apareixen desancorats de
+l'aplicació) i l'overlay central bloquejant «⏳ Processant…» se substitueixen per
+fulls inferiors i avisos que no bloquegen la interfície.
+
+### 7. Tema fosc
+
+Complet, amb tres estats (automàtic / clar / fosc) des del botó del capçal. Es
+resol abans del primer pintat perquè no hi hagi flaix blanc. La impressió surt
+sempre en clar.
+
+### 8. Esquelets en comptes d'estats d'espera
+
+Mentre no hi ha dades es mostra un esquelet amb la mida definitiva, així que no
+hi ha cap salt de disposició quan arriben. Substitueix el `…` i el fos al 30 %.
+
+### 9. Transicions i detalls
+
+Canvi de mes amb lliscament direccional, comptadors que animen del valor antic
+al nou, rebot als dies que acaben de canviar, `prefers-reduced-motion` respectat,
+`:focus-visible` per a navegació amb teclat, i etiquetes `aria-label` a cada dia
+amb el seu contingut real.
+
+### 10. Prima per cap de setmana treballat sencer
+
+Nou comptador: **150 € per cada dissabte + diumenge treballats íntegrament**, que
+es cobren l'any següent.
+
+Un dia compta com a treballat només si té torn i **cap altra marca**. Qualsevol
+absència en un dels dos dies —baixa, llicència, AP/CH, VE, VA, EBEP, FC, FS, FO,
+FO/DES o festiu oficial automàtic— deixa aquell cap de setmana fora de la prima.
+
+Es mostra en un bàner amb l'import total, en un xip de la barra d'extres, al peu
+i al resum de la vista anual (i per tant també a la impressió). Tocant el bàner
+s'obre el detall amb la llista de caps de setmana que compten, agrupats per mes,
+per poder-ho contrastar amb la nòmina.
+
+### Correcció addicional: festius mòbils de qualsevol any
+
+`festivosFijos()` tenia el Divendres Sant, el Dilluns de Pasqua i el Dilluns de
+Pasqua Granada escrits a mà només per a 2025 i 2026, i retornava una llista buida
+per a qualsevol altre any — tot i que el selector d'anys arriba fins a l'actual
+més tres. Ara es calculen amb l'algorisme de Meeus/Jones/Butcher, i per a 2025 i
+2026 donen exactament les mateixes dates que hi havia escrites.
+
+## Proves
+
+Sense dependències: carreguen el codi real amb un DOM mínim i comproven la capa
+de dades, les mutacions optimistes, «Desfés» i el càlcul de la prima.
+
+```sh
+node test/test-client.js         # capa de dades i mutacions optimistes
+node test/test-caps-setmana.js   # prima per cap de setmana
+node test/test-servidor.js       # Pasqua, festius i detecció de tipus
+```
