@@ -1789,7 +1789,9 @@ function derivar(anio) {
   ds.setDate(ds.getDate() + ((6 - ds.getDay() + 7) % 7));           // primer dissabte de l'any
   while (ds.getFullYear() === anio) {
     var dg = new Date(ds.getTime()); dg.setDate(dg.getDate() + 1);  // el diumenge següent
-    // Un cap de setmana a cavall de dos anys es comptabilitza a l'any del diumenge
+    // Els parells que creuen el canvi d'any (dissabte 31/12 + diumenge 1/1) no
+    // es compten: el diumenge és a les dades de l'any següent, i barrejar-les
+    // faria que l'import canviés segons si aquell any ja s'ha carregat o no.
     if (dg.getFullYear() === anio) {
       var ks = ds.getMonth() + '_' + ds.getDate();
       var kg = dg.getMonth() + '_' + dg.getDate();
